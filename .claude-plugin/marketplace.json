@@ -1,0 +1,17 @@
+{
+  "name": "explainix",
+  "owner": {
+    "name": "Explainix"
+  },
+  "plugins": [
+    {
+      "name": "promptiq",
+      "description": "Score your AI proficiency across 8 dimensions and track improvement over time",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Explainix"
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "promptiq",
+  "description": "Score your AI proficiency across 8 dimensions and track improvement over time",
+  "version": "0.1.0",
+  "author": {
+    "name": "Explainix"
+  },
+  "homepage": "https://github.com/Explainix/promptiq",
+  "repository": "https://github.com/Explainix/promptiq",
+  "license": "MIT",
+  "keywords": [
+    "prompt-engineering",
+    "ai-skills",
+    "scoring",
+    "productivity"
+  ]
+}
