@@ -45,13 +45,11 @@ Copy `skills/score/SKILL.md` to your tool's skills directory and trigger with `/
 
 ## Usage
 
-At any point during a session, run:
+**Claude Code:** run `/score` in any session.
 
-```
-/score
-```
+**Codex CLI:** run `/score` or just say "score my prompting" — Codex matches skills by description automatically. Restart Codex after installing to pick up the skill.
 
-PromptIQ analyzes your conversation and outputs a scored report. History is saved to `~/.promptiq/history.json` — shared across all tools.
+**Other AI CLIs:** trigger depends on your tool's skill loading mechanism.
 
 ## Dimensions scored
 

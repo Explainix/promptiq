@@ -1,5 +1,5 @@
 ---
-name: install
+name: promptiq-install
 description: Install PromptIQ on the current machine. Detects the AI CLI environment and installs to the appropriate skills directory. Works with Claude Code, Codex CLI, and any AI CLI that supports skill files. Trigger with /install.
 triggers:
   - /install
@@ -46,6 +46,8 @@ curl -fsSL -o ~/.codex/skills/promptiq/SKILL.md \
   https://raw.githubusercontent.com/Explainix/promptiq/main/skills/score/SKILL.md && \
 echo "OK"
 ```
+
+After installing, restart Codex. Then use `/score` (Claude Code trigger) or just ask "score my prompting" — Codex matches skills by description automatically.
 
 ### Any other AI CLI with a skills directory
 

@@ -1,6 +1,6 @@
 ---
-name: score
-description: Evaluate the user's AI proficiency based on this session's conversation. Scores 8 dimensions, shows trend vs history, and gives specific improvement suggestions. Trigger with /score.
+name: promptiq
+description: Score the user's AI prompting proficiency. Use when the user runs /score, asks to evaluate their prompting skills, or wants feedback on how well they used AI in this session.
 triggers:
   - /score
 ---
