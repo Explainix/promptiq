@@ -1,0 +1,24 @@
+{
+  "name": "structured_debug_session",
+  "description": "Medium-high quality technical collaboration with evidence-based refinement",
+  "expected": {
+    "complexity": "high",
+    "confidence": "medium",
+    "total_min": 7.0,
+    "total_max": 8.4
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "content": "Please review the failing deploy flow. First isolate whether the regression is in build, runtime, or auth middleware. Then propose the minimum fix and list the files you would touch."
+    },
+    {
+      "role": "user",
+      "content": "Do not refactor unrelated modules. I only want the smallest change that restores production behavior."
+    },
+    {
+      "role": "user",
+      "content": "That diagnosis is too broad. Narrow it to the middleware path only and compare against yesterday's behavior."
+    }
+  ]
+}

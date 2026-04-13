@@ -1,0 +1,99 @@
+{
+  "rubric_version": "1.0.0",
+  "product_mode": "strict-coach",
+  "defaults": {
+    "base_score": 5.0,
+    "round_digits": 1
+  },
+  "score_bands": [
+    {
+      "label": "foundational",
+      "min_total": 0.0
+    },
+    {
+      "label": "competent",
+      "min_total": 6.5
+    },
+    {
+      "label": "strong",
+      "min_total": 7.5
+    },
+    {
+      "label": "elite",
+      "min_total": 8.5
+    }
+  ],
+  "dimensions": {
+    "clarity": {
+      "na_eligible": false,
+      "high_score_requires_evidence": true
+    },
+    "context": {
+      "na_eligible": false,
+      "high_score_requires_evidence": true
+    },
+    "iteration": {
+      "na_eligible": false,
+      "high_score_requires_evidence": true
+    },
+    "decomposition": {
+      "na_eligible": false,
+      "high_score_requires_evidence": true
+    },
+    "output_spec": {
+      "na_eligible": false,
+      "high_score_requires_evidence": true
+    },
+    "examples": {
+      "na_eligible": true,
+      "high_score_requires_evidence": true
+    },
+    "reasoning": {
+      "na_eligible": true,
+      "high_score_requires_evidence": true
+    },
+    "tool_awareness": {
+      "na_eligible": true,
+      "high_score_requires_evidence": true
+    }
+  },
+  "confidence_rules": {
+    "low_if_meaningful_user_messages_below": 4,
+    "medium_if_meaningful_user_messages_below": 7,
+    "low_if_complexity_is": [
+      "low"
+    ],
+    "high_requires": {
+      "meaningful_user_messages_at_least": 7,
+      "complexity_in": [
+        "medium",
+        "high"
+      ],
+      "evidence_quotes_at_least": 2
+    }
+  },
+  "score_caps": {
+    "short_session_cap": 6.4,
+    "low_complexity_cap": 6.8,
+    "low_confidence_cap": 6.6
+  },
+  "high_score_gates": {
+    "above_7_5": {
+      "min_evidence_quotes": 2,
+      "min_corrections_or_refinements": 1,
+      "min_output_constraints": 1
+    },
+    "above_8_5": {
+      "complexity_must_be": "high",
+      "confidence_cannot_be": "low",
+      "min_evidence_quotes": 3,
+      "min_corrections_or_refinements": 2,
+      "min_output_constraints": 2,
+      "min_tool_signals": 1
+    }
+  },
+  "history": {
+    "path": "~/.promptiq/history.json",
+    "compare_only_same_rubric_version": true
+  }
+}

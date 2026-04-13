@@ -1,0 +1,23 @@
+{
+  "name": "short_simple_session",
+  "description": "Very short low-complexity session that should not score highly",
+  "expected": {
+    "complexity": "low",
+    "confidence": "low",
+    "total_max": 6.4
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "content": "fix this bug"
+    },
+    {
+      "role": "assistant",
+      "content": "Can you share the error?"
+    },
+    {
+      "role": "user",
+      "content": "here is the stack trace"
+    }
+  ]
+}

@@ -6,8 +6,8 @@
   "plugins": [
     {
       "name": "promptiq",
-      "description": "Score your AI proficiency across 8 dimensions and track improvement over time",
-      "version": "0.2.0",
+      "description": "Strict session reviews for power users collaborating with AI",
+      "version": "0.4.0",
       "source": {
         "source": "url",
         "url": "https://github.com/Explainix/promptiq.git"

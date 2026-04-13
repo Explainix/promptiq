@@ -1,0 +1,43 @@
+{
+  "name": "chatty_low_control_session",
+  "description": "A verbose session with plenty of words but weak steering, weak output control, and little refinement.",
+  "expected": {
+    "complexity": "medium",
+    "confidence": "medium",
+    "total_max": 6.9,
+    "notes": [
+      "Should not be rewarded just for being long",
+      "Should expose weak output specification and weak iteration discipline"
+    ]
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "content": "I want to improve this feature. Think carefully and give me something really strong."
+    },
+    {
+      "role": "assistant",
+      "content": "What kind of improvement are you looking for?"
+    },
+    {
+      "role": "user",
+      "content": "Just overall better UX and cleaner architecture. You decide."
+    },
+    {
+      "role": "assistant",
+      "content": "Do you have constraints?"
+    },
+    {
+      "role": "user",
+      "content": "Not really, just make it impressive."
+    },
+    {
+      "role": "assistant",
+      "content": "Would you like a plan or code?"
+    },
+    {
+      "role": "user",
+      "content": "Whatever you think is best."
+    }
+  ]
+}

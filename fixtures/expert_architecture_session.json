@@ -1,0 +1,27 @@
+{
+  "name": "expert_architecture_session",
+  "description": "High-complexity session with explicit constraints, scoped iteration, and clear output control.",
+  "expected": {
+    "complexity": "high",
+    "confidence": "high",
+    "total_min": 8.5
+  },
+  "transcript": [
+    {
+      "role": "user",
+      "content": "Audit this AI orchestration pipeline and identify which responsibilities should move out of the prompt layer into deterministic code. I want a migration plan, not a vague critique."
+    },
+    {
+      "role": "user",
+      "content": "Constrain the proposal to the smallest v1 that improves trust: scoring math, history compatibility, and one coaching feature. Ignore stretch ideas for now."
+    },
+    {
+      "role": "user",
+      "content": "The previous diagnosis is still too soft. Rewrite it for a power user audience and explicitly state why the score should not go above 8 unless the session shows real steering behavior."
+    },
+    {
+      "role": "user",
+      "content": "Before you suggest implementation, separate what must stay model-judged from what must become deterministic. Then give me a file-level repo shape."
+    }
+  ]
+}
