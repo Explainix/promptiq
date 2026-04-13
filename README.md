@@ -47,9 +47,25 @@ promptiq/
 
 ## Installation
 
+### AI-Native Install
+
+Paste this into your AI CLI:
+
+```text
+Read https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/SKILL.md and install PromptIQ. Do not ask follow-up questions unless a command fails.
+```
+
+That prompt should make the agent:
+
+- download and run the installer script
+- install `~/.promptiq/promptiq.py`
+- install `~/.promptiq/rubric_v1.json`
+- install the `promptiq` Codex skill bundle when `codex` is present
+- install the Claude plugin when `claude` is present
+
 ### Quick Start
 
-Recommended bootstrap:
+Direct shell bootstrap:
 
 ```bash
 curl -fsSL -o /tmp/install_promptiq.py \
@@ -66,10 +82,10 @@ This installs:
 
 ### Agent-driven install
 
-Ask your AI CLI to download and run:
+Use the install skill URL directly:
 
 ```text
-https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/scripts/install_promptiq.py
+https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/SKILL.md
 ```
 
 ### Claude Code
