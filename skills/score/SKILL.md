@@ -34,6 +34,12 @@ Score the user on these 8 dimensions. Be honest and calibrated — a 10 means ex
 | 推理引导 | reasoning | Step-by-step thinking elicited for hard problems. N/A (score 5) if session had no complex reasoning tasks. |
 | 工具意识 | tool_awareness | Claude Code features used appropriately (file refs, @mentions, slash commands). N/A (score 5) if not applicable. |
 
+## Step 3.5: Compute total score
+
+Add all 8 dimension scores and divide by 8. Round to 1 decimal place. Call this value TOTAL. Use TOTAL consistently in both the report (Step 4) and when saving to history (Step 5).
+
+For progress bars, use round(score) to get an integer 1–10, then render that many █ characters followed by (10 - round(score)) ░ characters.
+
 ## Step 3: Read history file
 
 Use the Bash tool to read ~/.claude/promptiq/history.json:
@@ -86,7 +92,7 @@ Trend line rules:
 If 3+ sessions exist, add after the report:
 
   近期趋势（最近5次）
-  [list last up to 5 sessions as: YYYY-MM-DD  X.X  weakest dimension]
+  [list last up to 5 sessions as: YYYY-MM-DD  X.X  (weakest dimension that session = lowest scoring key)]
 
   重点改进方向：[the dimension with the lowest average score]
 
@@ -106,28 +112,36 @@ Then construct and run the following, replacing all ACTUAL_* placeholders with r
 ```bash
 HISTORY_FILE="$HOME/.claude/promptiq/history.json"
 mkdir -p "$(dirname "$HISTORY_FILE")"
-CURRENT=$(cat "$HISTORY_FILE" 2>/dev/null || echo '{"sessions":[]}')
-python3 -c "
-import json
-data = json.loads('''$CURRENT''')
-data['sessions'].append({
-  'date': 'ACTUAL_ISO_DATE',
-  'total': ACTUAL_TOTAL,
-  'dimensions': {
-    'clarity': ACTUAL_CLARITY,
-    'context': ACTUAL_CONTEXT,
-    'iteration': ACTUAL_ITERATION,
-    'decomposition': ACTUAL_DECOMPOSITION,
-    'output_spec': ACTUAL_OUTPUT_SPEC,
-    'examples': ACTUAL_EXAMPLES,
-    'reasoning': ACTUAL_REASONING,
-    'tool_awareness': ACTUAL_TOOL_AWARENESS
+export NEW_SESSION='{
+  "date": "ACTUAL_ISO_DATE",
+  "total": ACTUAL_TOTAL,
+  "dimensions": {
+    "clarity": ACTUAL_CLARITY,
+    "context": ACTUAL_CONTEXT,
+    "iteration": ACTUAL_ITERATION,
+    "decomposition": ACTUAL_DECOMPOSITION,
+    "output_spec": ACTUAL_OUTPUT_SPEC,
+    "examples": ACTUAL_EXAMPLES,
+    "reasoning": ACTUAL_REASONING,
+    "tool_awareness": ACTUAL_TOOL_AWARENESS
   },
-  'session_summary': 'ACTUAL_SUMMARY'
-})
-print(json.dumps(data, indent=2, ensure_ascii=False))
-" > "$HISTORY_FILE"
-echo "Saved to $HISTORY_FILE"
+  "session_summary": "ACTUAL_SUMMARY"
+}'
+python3 - <<'PYEOF'
+import json, os
+history_file = os.path.expanduser("~/.claude/promptiq/history.json")
+try:
+    with open(history_file) as f:
+        data = json.load(f)
+except FileNotFoundError:
+    data = {"sessions": []}
+data["sessions"].append(json.loads(os.environ["NEW_SESSION"]))
+with open(history_file, "w") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+print("Saved to " + history_file)
+PYEOF
 ```
+
+If python3 is unavailable or the command fails, report: "PromptIQ: could not save history (python3 not found). Your score was [TOTAL] but was not persisted."
 
 The session_summary should be a brief (5–10 word) description of what the session was about, e.g. "设计 PromptIQ 插件架构".
