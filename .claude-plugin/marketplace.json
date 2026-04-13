@@ -7,7 +7,7 @@
     {
       "name": "promptiq",
       "description": "Score your AI proficiency across 8 dimensions and track improvement over time",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "source": {
         "source": "url",
         "url": "https://github.com/Explainix/promptiq.git"

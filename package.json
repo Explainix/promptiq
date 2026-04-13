@@ -1,6 +1,6 @@
 {
   "name": "promptiq",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Claude Code plugin that scores your AI proficiency and tracks improvement over time",
   "keywords": ["claude-code", "plugin", "prompt-engineering", "ai-skills"],
   "license": "MIT",

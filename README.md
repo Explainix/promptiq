@@ -10,25 +10,26 @@ Run `/score` at the end of any session to get:
 - Specific improvement suggestions with quotes from your session
 - Trend tracking vs. your previous sessions
 
-## Requirements
-
-- Python 3.6+ (for history persistence — pre-installed on macOS and most Linux distros)
-
 ## Installation
 
-### Claude Code
+### Let the agent install it for you
+
+Paste this into any Claude Code or Codex session:
+
+```
+Read https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/SKILL.md and follow the instructions to install PromptIQ.
+```
+
+### Claude Code (manual)
 
 ```bash
-# Add the marketplace (one-time)
 claude plugin marketplace add Explainix/promptiq
-
-# Install the plugin
 claude plugin install promptiq
 ```
 
 Then run `/score` in any session to verify.
 
-### Codex CLI
+### Codex CLI (manual)
 
 ```bash
 mkdir -p ~/.codex/skills/promptiq
@@ -41,6 +42,10 @@ Then run `/score` in any session to verify.
 ### Manual (any AI CLI that supports skills)
 
 Copy `skills/score/SKILL.md` to your skills directory and trigger with `/score`.
+
+## Requirements
+
+- Python 3.6+ (for history persistence — pre-installed on macOS and most Linux distros)
 
 ## Usage
 
