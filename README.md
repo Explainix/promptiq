@@ -1,6 +1,6 @@
 # PromptIQ
 
-A skill for Claude Code and Codex CLI that scores your AI proficiency and tracks improvement over time.
+A skill that scores your AI prompting proficiency and tracks improvement over time. Works with any AI CLI that supports Markdown skill files — Claude Code, Codex CLI, and others.
 
 ## What it does
 
@@ -10,42 +10,38 @@ Run `/score` at the end of any session to get:
 - Specific improvement suggestions with quotes from your session
 - Trend tracking vs. your previous sessions
 
+## Requirements
+
+- Python 3.6+ (for history persistence — pre-installed on macOS and most Linux distros)
+
 ## Installation
 
 ### Let the agent install it for you
 
-Paste this into any Claude Code or Codex session:
+Paste this into any session:
 
 ```
 Read https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/SKILL.md and follow the instructions to install PromptIQ.
 ```
 
-### Claude Code (manual)
+### Claude Code
 
 ```bash
 claude plugin marketplace add Explainix/promptiq
 claude plugin install promptiq
 ```
 
-Then run `/score` in any session to verify.
-
-### Codex CLI (manual)
+### Codex CLI
 
 ```bash
 mkdir -p ~/.codex/skills/promptiq
-curl -o ~/.codex/skills/promptiq/SKILL.md \
+curl -fsSL -o ~/.codex/skills/promptiq/SKILL.md \
   https://raw.githubusercontent.com/Explainix/promptiq/main/skills/score/SKILL.md
 ```
 
-Then run `/score` in any session to verify.
+### Any other AI CLI
 
-### Manual (any AI CLI that supports skills)
-
-Copy `skills/score/SKILL.md` to your skills directory and trigger with `/score`.
-
-## Requirements
-
-- Python 3.6+ (for history persistence — pre-installed on macOS and most Linux distros)
+Copy `skills/score/SKILL.md` to your tool's skills directory and trigger with `/score`.
 
 ## Usage
 
@@ -55,7 +51,7 @@ At any point during a session, run:
 /score
 ```
 
-PromptIQ analyzes your conversation and outputs a scored report. History is saved to `~/.claude/promptiq/history.json`.
+PromptIQ analyzes your conversation and outputs a scored report. History is saved to `~/.promptiq/history.json` — shared across all tools.
 
 ## Dimensions scored
 
@@ -72,11 +68,12 @@ PromptIQ analyzes your conversation and outputs a scored report. History is save
 
 ## Privacy
 
-All data is stored locally at `~/.claude/promptiq/history.json`. Nothing is uploaded.
+All data is stored locally at `~/.promptiq/history.json`. Nothing is uploaded.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `skills/score/SKILL.md` | Main skill — works in Claude Code and Codex CLI |
+| `skills/score/SKILL.md` | Scoring skill — works in any AI CLI |
+| `skills/install/SKILL.md` | Agent-driven installer |
 | `.claude-plugin/` | Claude Code plugin manifest |

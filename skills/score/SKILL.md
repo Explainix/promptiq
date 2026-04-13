@@ -44,10 +44,10 @@ For progress bars, use round(score) to get an integer 1–10, then render that m
 
 ## Step 3: Read history file
 
-Use the Bash tool to read ~/.claude/promptiq/history.json:
+Use the Bash tool to read ~/.promptiq/history.json:
 
 ```bash
-cat ~/.claude/promptiq/history.json 2>/dev/null || echo "NO_HISTORY"
+cat ~/.promptiq/history.json 2>/dev/null || echo "NO_HISTORY"
 ```
 
 If the output is NO_HISTORY, this is the user's first session.
@@ -112,7 +112,7 @@ First, compute the total score as the average of all 8 dimension scores (round t
 Then construct and run the following, replacing all ACTUAL_* placeholders with real values before executing:
 
 ```bash
-HISTORY_FILE="$HOME/.claude/promptiq/history.json"
+HISTORY_FILE="$HOME/.promptiq/history.json"
 mkdir -p "$(dirname "$HISTORY_FILE")"
 export NEW_SESSION='{
   "date": "ACTUAL_ISO_DATE",
@@ -131,7 +131,7 @@ export NEW_SESSION='{
 }'
 python3 - <<'PYEOF'
 import json, os
-history_file = os.path.expanduser("~/.claude/promptiq/history.json")
+history_file = os.path.expanduser("~/.promptiq/history.json")
 try:
     with open(history_file) as f:
         data = json.load(f)
