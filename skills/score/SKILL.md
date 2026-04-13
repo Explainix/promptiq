@@ -25,20 +25,22 @@ Score the user on these 8 dimensions. Be honest and calibrated — a 10 means ex
 
 | Dimension | Key | What to evaluate |
 |-----------|-----|-----------------|
-| Instruction Clarity | clarity | Instructions are specific and unambiguous. Penalize vague requests like "make it better" with no criteria. |
-| Context Provision | context | Background and "why" are provided. Penalize bare requests with no motivation or constraints. |
-| Iteration Quality | iteration | Follow-ups advance the task. Penalize repeating the same ask, or accepting wrong answers without correction. |
-| Task Decomposition | decomposition | Complex tasks are broken into steps. Penalize single mega-prompts that try to do everything at once. |
-| Output Specification | output_spec | Format, length, style are explicitly specified. Penalize accepting whatever format the AI defaults to. |
-| Example Usage | examples | Few-shot examples used when consistency matters. N/A (score 5) if session had no tasks requiring consistency. |
-| Reasoning Elicitation | reasoning | Step-by-step thinking elicited for hard problems. N/A (score 5) if session had no complex reasoning tasks. |
-| Tool Awareness | tool_awareness | AI tool features used appropriately (file refs, @mentions, slash commands). N/A (score 5) if not applicable. |
+| Instruction Clarity | clarity | Instructions are specific and unambiguous. Distinct from Context: this is about *what* is asked, not *why*. Penalize vague requests like "make it better" with no success criteria. |
+| Context Provision | context | Background, motivation, and constraints are provided. Distinct from Clarity: this is about *why* and *under what conditions*, not the instruction itself. Penalize bare requests with no explanation of the goal or constraints. |
+| Iteration Quality | iteration | Follow-ups advance the task rather than repeat it. Score high if the user corrects errors precisely, refines scope, or builds on previous output. Score low if they repeat the same ask verbatim or accept clearly wrong answers without pushback. |
+| Task Decomposition | decomposition | Complex tasks are broken into focused steps rather than crammed into one mega-prompt. Score high if the user sequences requests logically. Score low if a single prompt tries to do 5 things at once. |
+| Output Specification | output_spec | Format, length, tone, or style are explicitly specified. Penalize accepting whatever the AI defaults to when the format clearly matters (e.g. asking for code but not specifying language, or asking for a summary with no length constraint). |
+| Example Usage | examples | **N/A-eligible.** Few-shot examples provided when output consistency matters (e.g. generating multiple items in a specific format). Mark as N/A if the session had no tasks where examples would have helped — do not score, exclude from total. |
+| Reasoning Elicitation | reasoning | **N/A-eligible.** User explicitly asks the AI to think step-by-step, verify its answer, or reason before responding — on tasks where this would improve quality. Mark as N/A if the session had no complex reasoning tasks — do not score, exclude from total. |
+| Tool Awareness | tool_awareness | **N/A-eligible.** AI tool features used appropriately (file refs, @mentions, slash commands, structured outputs). Mark as N/A if the session context made tool use irrelevant — do not score, exclude from total. |
 
 ## Step 3.5: Compute total score
 
-Add all 8 dimension scores and divide by 8. Round to 1 decimal place. Call this value TOTAL. Use TOTAL consistently in both the report (Step 4) and when saving to history (Step 5).
+Only include dimensions that were actually scored (exclude any marked N/A). Sum the scored dimensions and divide by the count of scored dimensions. Round to 1 decimal place. Call this value TOTAL.
 
-For progress bars, use round(score) to get an integer 1–10, then render that many █ characters followed by (10 - round(score)) ░ characters.
+Example: if examples and reasoning are N/A, sum the 6 scored dimensions and divide by 6.
+
+For progress bars, use round(score) to get an integer 1–10, then render that many █ characters followed by (10 - round(score)) ░ characters. For N/A dimensions, render `──────────  N/A`.
 
 ## Step 3: Read history file
 
@@ -65,9 +67,9 @@ Output the report in this exact format:
   Iteration Quality     [bar]  [N]/10
   Task Decomposition    [bar]  [N]/10
   Output Specification  [bar]  [N]/10
-  Example Usage         [bar]  [N]/10
-  Reasoning Elicitation [bar]  [N]/10
-  Tool Awareness        [bar]  [N]/10
+  Example Usage         [bar or N/A]  [N]/10 or N/A
+  Reasoning Elicitation [bar or N/A]  [N]/10 or N/A
+  Tool Awareness        [bar or N/A]  [N]/10 or N/A
 
   Highlight
   [One specific thing the user did well, with a direct quote from their message]
@@ -94,7 +96,7 @@ If 3+ sessions exist, add after the report:
   Recent Trend (last 5 sessions)
   [list last up to 5 sessions as: YYYY-MM-DD  X.X  (weakest dimension that session = lowest scoring key)]
 
-  Focus area: [the dimension with the lowest average score]
+  Focus area: [the dimension with the lowest average score across all sessions, excluding N/A entries]
 
 If 10+ sessions exist, also add:
 
@@ -121,9 +123,9 @@ export NEW_SESSION='{
     "iteration": ACTUAL_ITERATION,
     "decomposition": ACTUAL_DECOMPOSITION,
     "output_spec": ACTUAL_OUTPUT_SPEC,
-    "examples": ACTUAL_EXAMPLES,
-    "reasoning": ACTUAL_REASONING,
-    "tool_awareness": ACTUAL_TOOL_AWARENESS
+    "examples": ACTUAL_EXAMPLES_OR_NULL,
+    "reasoning": ACTUAL_REASONING_OR_NULL,
+    "tool_awareness": ACTUAL_TOOL_AWARENESS_OR_NULL
   },
   "session_summary": "ACTUAL_SUMMARY"
 }'
@@ -144,4 +146,6 @@ PYEOF
 
 If python3 is unavailable or the command fails, report: "PromptIQ: could not save history (python3 not found). Your score was [TOTAL] but was not persisted."
 
-The session_summary should be a brief (5–10 word) description of what the session was about, e.g. "设计 PromptIQ 插件架构".
+The session_summary should be a brief (5–10 word) description of what the session was about, e.g. "Designed PromptIQ plugin architecture".
+
+For N/A dimensions, use `null` as the value in the JSON (not a number). The total saved to history must match the TOTAL computed in Step 3.5 (average of scored dimensions only).
