@@ -1,16 +1,16 @@
 # Sample PromptIQ Report
 
 ```text
-╭──────────────────────── PromptIQ Review ────────────────────────╮
-│ Score      7.4 / 10          Band       Competent               │
-│ Signal     High confidence   High complexity                    │
-│ Trend      +0.3 vs last compatible session                      │
-╰──────────────────────────────────────────────────────────────────╯
+┌─ PROMPTIQ / SESSION DASHBOARD ───────────────────────────────────┐
+│ SCORE        7.4/10       BAND        COMPETENT                 │
+│ CONFIDENCE   HIGH         COMPLEXITY  HIGH                      │
+│ DELTA        +0.3 vs last compatible session                    │
+└──────────────────────────────────────────────────────────────────┘
 
-Why It Is Not Higher
-This session had real steering and decent structure, but it stopped short of the next band because output control was not sustained. The user narrowed scope well and corrected drift, but did not repeatedly define what a good final answer had to contain.
+[WHY NOT HIGHER]
+This session had real steering and decent structure, but the finish line stayed too soft. Scope control was solid, course correction happened on time, yet the user did not keep specifying what a successful final answer had to contain.
 
-Dimension Breakdown
+[DIMENSION GRID]
 Instruction Clarity    ███████░░░  7/10
 Context Provision      ███████░░░  7/10
 Iteration Quality      ████████░░  8/10
@@ -20,28 +20,28 @@ Example Usage          ──────────  N/A
 Reasoning Elicitation  ████████░░  8/10
 Tool Awareness         ███████░░░  7/10
 
-Strongest Evidence
+[BEST SIGNAL]
 > "Please review the failing deploy flow. First isolate whether the regression is in build, runtime, or auth middleware. Then propose the minimum fix and list the files you would touch."
 
-This works because it combines scope, analysis order, and deliverable shape in one move. The model is not left guessing what kind of help is needed.
+This prompt is strong because it locks three things at once: scope, reasoning order, and output shape. The model is given a lane and a deliverable before it starts moving.
 
-Hardest Corrections
-1. Original: "That diagnosis is too broad. Narrow it to the middleware path only and compare against yesterday's behavior."
-   Rewrite:  "Limit the analysis to middleware only. Compare today's behavior against yesterday's middleware diff and exclude build/runtime."
-   Why:      Better boundary control. It removes adjacent areas the model would otherwise keep drifting into.
+[COURSE CORRECTIONS]
+1. INPUT    "That diagnosis is too broad. Narrow it to the middleware path only and compare against yesterday's behavior."
+   PATCH    "Limit the analysis to middleware only. Compare today's behavior against yesterday's middleware diff and exclude build/runtime."
+   EFFECT   Better boundary control. It closes off nearby branches the model would otherwise wander into.
 
-2. Original: "Do not refactor unrelated modules. I only want the smallest change that restores production behavior."
-   Rewrite:  "Give me the smallest safe patch. No refactors, no naming cleanup, and no unrelated file edits."
-   Why:      Better output control. It defines the shape of the answer, not just the general preference.
+2. INPUT    "Do not refactor unrelated modules. I only want the smallest change that restores production behavior."
+   PATCH    "Give me the smallest safe patch. No refactors, no naming cleanup, and no unrelated file edits."
+   EFFECT   Better output control. It specifies the acceptable shape of the answer, not just the general preference.
 
-Next Session Drill
-Add one explicit acceptance rule to every corrective follow-up. Do not only narrow scope; say what a successful answer must include before the model writes it.
+[NEXT DRILL]
+Add one explicit acceptance rule to every corrective follow-up. Do not only narrow scope. State what the answer must include before the model writes it.
 
-Recent Trend
-2026-04-10   6.8   weakest: Output Specification
-2026-04-12   7.1   weakest: Context Provision
-2026-04-13   7.4   weakest: Output Specification
+[RECENT TREND]
+2026-04-10   score 6.8   weakest=Output Specification
+2026-04-12   score 7.1   weakest=Context Provision
+2026-04-13   score 7.4   weakest=Output Specification
 
-Focus Area
-Output Specification is still the drag point across recent sessions. Tighten the finish line earlier and restate it whenever you correct course.
+[FOCUS AREA]
+Output Specification is still the system bottleneck across recent sessions. Tighten the finish line earlier, then restate it every time you correct course.
 ```

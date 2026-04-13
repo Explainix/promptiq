@@ -3,16 +3,16 @@
 Render the report in this section order:
 
 ```text
-╭──────────────────────── PromptIQ Review ────────────────────────╮
-│ Score      [X.X] / 10          Band       [Foundational / Competent / Strong / Elite]
-│ Signal     [Low / Medium / High] confidence   [Low / Medium / High] complexity
-│ Trend      [If available: +0.3 vs last compatible session]
-╰──────────────────────────────────────────────────────────────────╯
+┌─ PROMPTIQ / SESSION DASHBOARD ───────────────────────────────────┐
+│ SCORE        [X.X]/10      BAND        [FOUNDATIONAL / COMPETENT / STRONG / ELITE]
+│ CONFIDENCE   [LOW / MEDIUM / HIGH]      COMPLEXITY  [LOW / MEDIUM / HIGH]
+│ DELTA        [If available: +0.3 vs last compatible session]
+└──────────────────────────────────────────────────────────────────┘
 
-Why It Is Not Higher
+[WHY NOT HIGHER]
 [Blunt paragraph grounded in helper output]
 
-Dimension Breakdown
+[DIMENSION GRID]
 Instruction Clarity    [bar]  [N]/10
 Context Provision      [bar]  [N]/10
 Iteration Quality      [bar]  [N]/10
@@ -22,29 +22,29 @@ Example Usage          [bar or N/A]
 Reasoning Elicitation  [bar or N/A]
 Tool Awareness         [bar or N/A]
 
-Strongest Evidence
+[BEST SIGNAL]
 > "[Quote one real user message]"
 [Explain in 1-2 crisp sentences why it was strong.]
 
-Hardest Corrections
-1. Original: "[specific weak or improvable user message]"
-   Rewrite:  "[better version]"
-   Why:      [short explanation]
-2. Original: "[specific weak or improvable user message]"
-   Rewrite:  "[better version]"
-   Why:      [short explanation]
+[COURSE CORRECTIONS]
+1. INPUT    "[specific weak or improvable user message]"
+   PATCH    "[better version]"
+   EFFECT   [short explanation]
+2. INPUT    "[specific weak or improvable user message]"
+   PATCH    "[better version]"
+   EFFECT   [short explanation]
 
-Next Session Drill
+[NEXT DRILL]
 [One concrete behavior to practice next time]
 ```
 
 If `history_session_count >= 3`, append:
 
 ```text
-Recent Trend
-[Last up to 5 compatible sessions in a compact list]
+[RECENT TREND]
+[Last up to 5 compatible sessions in a compact telemetry-style list]
 
-Focus Area
+[FOCUS AREA]
 [Longest-running weakest dimension, with one direct sentence on what to improve]
 ```
 
@@ -57,8 +57,9 @@ Progress bars:
 
 Style rules:
 
-- Keep the tone sharp, calm, and slightly editorial.
-- Make the layout feel composed, not like raw terminal dumps.
-- Prefer short paragraphs and aligned labels over dense blocks.
+- Keep the tone sharp, calm, and technical.
+- Make it feel like a polished instrument panel, not a generic CLI dump.
+- Prefer uppercase section tags, aligned telemetry labels, and compact high-signal prose.
+- Use a little swagger in naming, but keep the writing disciplined.
 - Do not use emojis.
 - Avoid sounding cute or performative. Elegant beats flashy.
