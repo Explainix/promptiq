@@ -10,6 +10,9 @@ Review only user messages. Evaluate the user's steering quality, not the assista
 1. Build a strict assessment for the current session.
    Score the 8 dimensions conservatively.
    Mark `examples`, `reasoning`, and `tool_awareness` as `null` when they are not applicable.
+   Set `applicability.verification` to `true` when the task outcome should have been checked, tested, or otherwise verified.
+   If the environment exposes a stable conversation or session identifier, include it as `session_id`.
+   If the model/runtime version is known, include it as `model_version`.
    Keep high scores rare:
    - `5` = average
    - `6` = decent
@@ -32,7 +35,7 @@ python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" finalize \
 ```
 
 3. Treat helper output as the source of truth.
-   Use helper output for `total`, `raw_total`, `confidence`, `trend`, `cap_reasons`, `score_band`, `weakest_dimension`, `next_band`, `why_not_higher`, `recent_trend`, `focus_area`, and `history_session_count`.
+   Use helper output for `total`, `raw_total`, `confidence`, `trend`, `cap_reasons`, `score_band`, `weakest_dimension`, `next_band`, `why_not_higher`, `recent_trend`, `focus_area`, `history_session_count`, and `history_write`.
    Do not recompute those fields in the report.
    If `history_warning` is present, tell the user their local trend history was reset because the saved history file was unreadable.
 

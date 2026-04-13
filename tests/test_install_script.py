@@ -36,6 +36,8 @@ class PromptIQInstallerTests(unittest.TestCase):
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq' / 'references' / 'report-template.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-install' / 'SKILL.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-install' / 'scripts' / 'install_promptiq.py').exists())
+            self.assertTrue((home / '.codex' / 'skills' / 'promptiq-rewrite-last' / 'SKILL.md').exists())
+            self.assertTrue((home / '.codex' / 'skills' / 'promptiq-rewrite-last' / 'references' / 'output-template.md').exists())
 
     def test_install_codex_skill_reports_not_found_without_codex(self):
         with tempfile.TemporaryDirectory() as tmpdir:

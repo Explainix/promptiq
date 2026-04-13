@@ -35,6 +35,7 @@ If you change scoring, confidence, history, or report logic:
 
 - add or update tests in `tests/`
 - update relevant fixtures in `fixtures/` when expectations change
+- update example outputs when the output contract changes
 - explain why the stricter behavior is better for real users
 - avoid making the product more flattering unless there is strong evidence it also becomes more accurate
 
@@ -56,6 +57,15 @@ When changing README or docs:
 - make the first screen answer "who is this for?" and "how do I verify it worked?"
 - prefer concrete examples over abstract claims
 - preserve the difference between session review and general prompt proficiency
+
+## Output Contracts
+
+PromptIQ treats the example markdown files as golden output contracts:
+
+- `examples/sample-report.md`
+- `examples/rewrite-last-sample.md`
+
+If you change output structure, headings, or summary tables, update the matching templates and keep `tests/test_output_contracts.py` passing.
 
 ## Pull Requests
 

@@ -1,5 +1,5 @@
 {
-  "rubric_version": "1.0.0",
+  "rubric_version": "1.1.0",
   "product_mode": "strict-coach",
   "defaults": {
     "base_score": 5.0,
@@ -81,7 +81,8 @@
     "above_7_5": {
       "min_evidence_quotes": 2,
       "min_corrections_or_refinements": 1,
-      "min_output_constraints": 1
+      "min_output_constraints": 1,
+      "min_verification_signals_if_applicable": 1
     },
     "above_8_5": {
       "complexity_must_be": "high",
@@ -89,7 +90,8 @@
       "min_evidence_quotes": 3,
       "min_corrections_or_refinements": 2,
       "min_output_constraints": 2,
-      "min_tool_signals": 1
+      "min_tool_signals": 1,
+      "min_verification_signals_if_applicable": 1
     }
   },
   "history": {

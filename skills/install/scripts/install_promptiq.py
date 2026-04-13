@@ -48,6 +48,18 @@ SKILL_BUNDLES = {
             'scripts/install_promptiq.py',
         ),
     ],
+    'promptiq-rewrite-last': [
+        (
+            REPO_ROOT / 'skills' / 'rewrite-last' / 'SKILL.md',
+            'skills/rewrite-last/SKILL.md',
+            'SKILL.md',
+        ),
+        (
+            REPO_ROOT / 'skills' / 'rewrite-last' / 'references' / 'output-template.md',
+            'skills/rewrite-last/references/output-template.md',
+            'references/output-template.md',
+        ),
+    ],
 }
 
 

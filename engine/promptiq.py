@@ -12,6 +12,7 @@ This helper keeps deterministic logic out of the prompt:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -78,8 +79,12 @@ def validate_assessment(assessment: dict[str, Any]) -> None:
     if assessment["complexity"] not in {"low", "medium", "high"}:
         raise ValueError("complexity must be one of: low, medium, high")
 
+    for optional_key in ["session_id", "session_fingerprint", "model_version"]:
+        if optional_key in assessment and assessment[optional_key] is not None and not isinstance(assessment[optional_key], str):
+            raise ValueError(f"{optional_key} must be a string when provided")
+
     applicability = assessment["applicability"]
-    required_applicability = ["examples", "reasoning", "tool_awareness"]
+    required_applicability = ["examples", "reasoning", "tool_awareness", "verification"]
     missing_applicability = [key for key in required_applicability if key not in applicability]
     if missing_applicability:
         raise ValueError(f"applicability missing keys: {', '.join(missing_applicability)}")
@@ -130,6 +135,7 @@ def apply_caps(raw_total: float, assessment: dict[str, Any], rubric: dict[str, A
     message_count = int(assessment.get("meaningful_user_messages", 0))
     complexity = assessment.get("complexity", "low")
     evidence = assessment.get("evidence_counts", {})
+    applicability = assessment.get("applicability", {})
 
     if message_count < rubric["confidence_rules"]["low_if_meaningful_user_messages_below"] and capped > caps["short_session_cap"]:
         capped = caps["short_session_cap"]
@@ -151,6 +157,10 @@ def apply_caps(raw_total: float, assessment: dict[str, Any], rubric: dict[str, A
             int(evidence.get("evidence_quotes", 0)) < gate["min_evidence_quotes"]
             or int(evidence.get("corrections_or_refinements", 0)) < gate["min_corrections_or_refinements"]
             or int(evidence.get("output_constraints", 0)) < gate["min_output_constraints"]
+            or (
+                applicability.get("verification")
+                and int(evidence.get("verification_signals", 0)) < gate.get("min_verification_signals_if_applicable", 0)
+            )
         ):
             capped = min(capped, 7.4)
             reasons.append("above_7_5_gate_failed")
@@ -164,6 +174,10 @@ def apply_caps(raw_total: float, assessment: dict[str, Any], rubric: dict[str, A
             or int(evidence.get("corrections_or_refinements", 0)) < gate["min_corrections_or_refinements"]
             or int(evidence.get("output_constraints", 0)) < gate["min_output_constraints"]
             or int(evidence.get("tool_signals", 0)) < gate["min_tool_signals"]
+            or (
+                applicability.get("verification")
+                and int(evidence.get("verification_signals", 0)) < gate.get("min_verification_signals_if_applicable", 0)
+            )
         ):
             capped = min(capped, 8.4)
             reasons.append("above_8_5_gate_failed")
@@ -188,6 +202,45 @@ def resolved_history_path(raw: str = DEFAULT_HISTORY_PATH) -> Path:
 
 def history_path(rubric: dict[str, Any]) -> Path:
     return resolved_history_path(rubric["history"]["path"])
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def derive_session_fingerprint(assessment: dict[str, Any]) -> str:
+    explicit = assessment.get("session_fingerprint")
+    if explicit:
+        return explicit
+
+    fingerprint_payload = {
+        "tool": assessment.get("tool"),
+        "session_summary": assessment.get("session_summary"),
+        "complexity": assessment.get("complexity"),
+        "meaningful_user_messages": assessment.get("meaningful_user_messages"),
+        "applicability": assessment.get("applicability", {}),
+        "evidence_counts": assessment.get("evidence_counts", {}),
+        "dimensions": assessment.get("dimensions", {}),
+    }
+    digest = hashlib.sha256(canonical_json(fingerprint_payload).encode("utf-8")).hexdigest()
+    return f"sha256:{digest}"
+
+
+def session_identity(assessment: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "session_id": assessment.get("session_id"),
+        "session_fingerprint": derive_session_fingerprint(assessment),
+        "model_version": assessment.get("model_version"),
+    }
+
+
+def same_session(record: dict[str, Any], identity: dict[str, Any]) -> bool:
+    session_id = identity.get("session_id")
+    if session_id and record.get("session_id") == session_id:
+        return True
+
+    fingerprint = identity.get("session_fingerprint")
+    return bool(fingerprint and record.get("session_fingerprint") == fingerprint)
 
 
 def load_history(path: Path) -> dict[str, Any]:
@@ -254,6 +307,7 @@ def next_band(total: float, rubric: dict[str, Any]) -> dict[str, Any] | None:
 
 def next_band_requirements(target_total: float, confidence: str, assessment: dict[str, Any], cap_reasons: list[str]) -> list[str]:
     evidence = assessment.get("evidence_counts", {})
+    applicability = assessment.get("applicability", {})
     requirements: list[str] = []
 
     if cap_reasons:
@@ -277,6 +331,8 @@ def next_band_requirements(target_total: float, confidence: str, assessment: dic
             requirements.append("Refine or correct the AI at least once instead of accepting the first pass.")
         if int(evidence.get("output_constraints", 0)) < 1:
             requirements.append("Set explicit success criteria or output format before pushing for a strong score.")
+        if applicability.get("verification") and int(evidence.get("verification_signals", 0)) < 1:
+            requirements.append("State how the result will be tested, checked, or falsified instead of assuming the first answer is correct.")
 
     if target_total >= 8.5:
         if assessment.get("complexity") != "high":
@@ -291,6 +347,8 @@ def next_band_requirements(target_total: float, confidence: str, assessment: dic
             requirements.append("Elite scores require repeated output control across the session.")
         if int(evidence.get("tool_signals", 0)) < 1:
             requirements.append("Use at least one relevant tool or AI-native workflow feature when the task benefits from it.")
+        if applicability.get("verification") and int(evidence.get("verification_signals", 0)) < 1:
+            requirements.append("Elite scores require at least one explicit verification path so the result can be proven, not merely asserted.")
 
     if not requirements:
         requirements.append("The next band needs cleaner evidence than this session provided.")
@@ -333,8 +391,10 @@ def focus_area(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
-def compute_trend(history: dict[str, Any], rubric_version: str, total: float) -> dict[str, Any] | None:
+def compute_trend(history: dict[str, Any], rubric_version: str, total: float, identity: dict[str, Any] | None = None) -> dict[str, Any] | None:
     sessions = compatible_sessions(history, rubric_version)
+    if identity is not None:
+        sessions = [session for session in sessions if not same_session(session, identity)]
     if not sessions:
         return None
     last = sessions[-1]
@@ -344,6 +404,24 @@ def compute_trend(history: dict[str, Any], rubric_version: str, total: float) ->
         "delta": round1(total - last_total),
         "session_count": len(sessions) + 1
     }
+
+
+def upsert_session_record(history: dict[str, Any], session_record: dict[str, Any]) -> str:
+    sessions = history.setdefault("sessions", [])
+    identity = {
+        "session_id": session_record.get("session_id"),
+        "session_fingerprint": session_record.get("session_fingerprint"),
+    }
+
+    for index, existing in enumerate(sessions):
+        if existing.get("rubric_version") != session_record.get("rubric_version"):
+            continue
+        if same_session(existing, identity):
+            sessions[index] = session_record
+            return "updated_existing"
+
+    sessions.append(session_record)
+    return "saved_new"
 
 
 def doctor(helper_path: Path, rubric_path: Path) -> dict[str, Any]:
@@ -406,6 +484,7 @@ def doctor(helper_path: Path, rubric_path: Path) -> dict[str, Any]:
 
 def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> dict[str, Any]:
     validate_assessment(assessment)
+    identity = session_identity(assessment)
     dimensions = assessment["dimensions"]
     scored_values = [float(v) for v in dimensions.values() if v is not None]
     raw_total = round1(compute_average(scored_values))
@@ -426,10 +505,13 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
     hist_path = history_path(rubric)
     history = load_history(hist_path)
     history_warning = history.get("_warning")
-    trend = compute_trend(history, rubric["rubric_version"], total)
+    trend = compute_trend(history, rubric["rubric_version"], total, identity)
 
     session_record = {
         "date": assessment["date"],
+        "session_id": identity["session_id"],
+        "session_fingerprint": identity["session_fingerprint"],
+        "model_version": identity["model_version"],
         "total": total,
         "raw_total": raw_total,
         "complexity": assessment.get("complexity"),
@@ -447,13 +529,18 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
         "session_summary": assessment.get("session_summary", ""),
     }
 
-    analytics_records = compatible_sessions(history, rubric["rubric_version"]) + [session_record]
+    analytics_records = [
+        record
+        for record in compatible_sessions(history, rubric["rubric_version"])
+        if not same_session(record, identity)
+    ] + [session_record]
     session_count = len(analytics_records)
     recent_trend = recent_trend_entries(analytics_records)
     weakest_focus_area = focus_area(analytics_records)
+    history_write = "not_saved"
 
     if save:
-        history.setdefault("sessions", []).append(session_record)
+        history_write = upsert_session_record(history, session_record)
         save_history(hist_path, history)
 
     return {
@@ -469,6 +556,7 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
         "focus_area": weakest_focus_area,
         "history_session_count": session_count,
         "history_warning": history_warning,
+        "history_write": history_write,
         "trend": trend,
         "session_record": session_record,
     }

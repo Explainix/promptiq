@@ -37,7 +37,17 @@ Implication for PromptIQ:
 - explain why verbose but weakly steered sessions should not score well
 - reinforce scoped context as a first-class habit
 
-### 3. Users want reusable workflow habits, not command sprawl
+### 3. Verification planning is a major separator
+
+In serious AI coding work, stronger users do not stop at "give me the fix." They ask how the fix will be checked: tests, logs, repro steps, comparisons, or explicit falsification conditions.
+
+Implication for PromptIQ:
+
+- do not treat tool usage as a full substitute for verification thinking
+- reward sessions that define how success will be proven
+- make missing verification paths visible in `Why It Is Not Higher`
+
+### 4. Users want reusable workflow habits, not command sprawl
 
 Community feedback around AI coding workflows shows a preference for small numbers of reusable patterns over giant command catalogs or oversized instruction files.
 
@@ -47,7 +57,7 @@ Implication for PromptIQ:
 - make `/score` excellent before adding more commands
 - make the README explain behavior quickly instead of burying users in options
 
-### 4. Install trust is a real UX problem
+### 5. Install trust is a real UX problem
 
 People regularly hit the "I installed it, but is it actually wired up?" problem with CLI-first tools. That uncertainty is extra damaging for a tool that is supposed to judge rigor.
 
@@ -57,7 +67,7 @@ Implication for PromptIQ:
 - print a verification command after install
 - make file paths and local state obvious
 
-### 5. The adjacent market is already crowded with prompt eval tools
+### 6. The adjacent market is already crowded with prompt eval tools
 
 Projects like Promptfoo already cover prompt regression testing, eval datasets, and model comparisons very well. That means PromptIQ should stay differentiated.
 
@@ -72,6 +82,7 @@ Implication for PromptIQ:
 - add a `doctor` command for install verification and local-state visibility
 - rewrite the README around real user jobs-to-be-done
 - keep the "session review" claim narrow and credible
+- make verification planning part of high-score behavior
 - favor calibration, fixtures, and contributor guidance over shallow feature expansion
 
 ## Sources Consulted

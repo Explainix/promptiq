@@ -35,6 +35,7 @@ python3 skills/install/scripts/install_promptiq.py
    - install `~/.promptiq/rubric_v1.json`
    - install the full `promptiq` Codex skill bundle, including `references/`
    - install the `promptiq-install` skill bundle for Codex so reinstall/update flows still work
+   - install the `promptiq-rewrite-last` skill bundle for Codex so users can improve recent prompts immediately
    - install the Claude plugin if `claude` is present and PromptIQ is not already available
 
 5. Verify Python 3.

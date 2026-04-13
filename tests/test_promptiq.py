@@ -36,12 +36,14 @@ def make_assessment(**overrides):
             'examples': False,
             'reasoning': True,
             'tool_awareness': True,
+            'verification': False,
         },
         'evidence_counts': {
             'evidence_quotes': 2,
             'corrections_or_refinements': 1,
             'output_constraints': 1,
             'tool_signals': 1,
+            'verification_signals': 0,
         },
         'dimensions': {
             'clarity': 7.0,
@@ -104,6 +106,7 @@ class PromptIQEngineTests(unittest.TestCase):
                 'corrections_or_refinements': 0,
                 'output_constraints': 0,
                 'tool_signals': 0,
+                'verification_signals': 0,
             },
             dimensions={
                 'clarity': 9.0,
@@ -134,6 +137,7 @@ class PromptIQEngineTests(unittest.TestCase):
                 'corrections_or_refinements': 0,
                 'output_constraints': 0,
                 'tool_signals': 0,
+                'verification_signals': 0,
             },
             dimensions={
                 'clarity': 8.0,
@@ -159,11 +163,18 @@ class PromptIQEngineTests(unittest.TestCase):
         assessment = make_assessment(
             complexity='high',
             meaningful_user_messages=9,
+            applicability={
+                'examples': False,
+                'reasoning': True,
+                'tool_awareness': True,
+                'verification': True,
+            },
             evidence_counts={
                 'evidence_quotes': 4,
                 'corrections_or_refinements': 2,
                 'output_constraints': 2,
                 'tool_signals': 1,
+                'verification_signals': 1,
             },
             dimensions={
                 'clarity': 9.0,
@@ -184,6 +195,43 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertEqual(result['score_band'], 'elite')
         self.assertEqual(result['cap_reasons'], [])
         self.assertIsNone(result['next_band'])
+
+    def test_high_score_requires_verification_when_applicable(self):
+        assessment = make_assessment(
+            complexity='high',
+            meaningful_user_messages=8,
+            applicability={
+                'examples': False,
+                'reasoning': True,
+                'tool_awareness': True,
+                'verification': True,
+            },
+            evidence_counts={
+                'evidence_quotes': 2,
+                'corrections_or_refinements': 1,
+                'output_constraints': 1,
+                'tool_signals': 1,
+                'verification_signals': 0,
+            },
+            dimensions={
+                'clarity': 8.0,
+                'context': 8.0,
+                'iteration': 8.0,
+                'decomposition': 8.0,
+                'output_spec': 8.0,
+                'examples': None,
+                'reasoning': 8.0,
+                'tool_awareness': 8.0,
+            },
+        )
+
+        result = ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
+
+        self.assertEqual(result['total'], 7.4)
+        self.assertIn('above_7_5_gate_failed', result['cap_reasons'])
+        self.assertTrue(
+            any('tested, checked, or falsified' in reason for reason in result['why_not_higher'])
+        )
 
     def test_recent_trend_and_focus_area_include_current_session(self):
         rubric = copy.deepcopy(RUBRIC)
@@ -236,6 +284,125 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertEqual(result['recent_trend'][-1]['date'], '2026-04-13')
         self.assertIsNotNone(result['focus_area'])
         self.assertEqual(result['focus_area']['key'], 'context')
+
+    def test_duplicate_session_updates_history_in_place(self):
+        rubric = copy.deepcopy(RUBRIC)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            history_file = Path(tmpdir) / 'history.json'
+            history_file.write_text(
+                json.dumps(
+                    {
+                        'sessions': [
+                            {
+                                'date': '2026-04-12',
+                                'session_id': 'sess-123',
+                                'session_fingerprint': 'sha256:old',
+                                'model_version': 'gpt-5.2',
+                                'total': 7.1,
+                                'raw_total': 7.1,
+                                'complexity': 'high',
+                                'confidence': 'medium',
+                                'rubric_version': rubric['rubric_version'],
+                                'plugin_version': '1.0.0',
+                                'tool': 'codex',
+                                'meaningful_user_messages': 6,
+                                'evidence_counts': {'evidence_quotes': 2},
+                                'cap_reasons': [],
+                                'score_band': 'competent',
+                                'weakest_dimension': {'key': 'context', 'label': 'Context Provision', 'score': 6.0},
+                                'dimensions': {
+                                    'clarity': 7.0,
+                                    'context': 6.0,
+                                    'iteration': 7.0,
+                                    'decomposition': 7.0,
+                                    'output_spec': 7.0,
+                                    'examples': None,
+                                    'reasoning': 7.0,
+                                    'tool_awareness': 7.0,
+                                },
+                                'applicability': {
+                                    'examples': False,
+                                    'reasoning': True,
+                                    'tool_awareness': True,
+                                    'verification': True,
+                                },
+                                'session_summary': 'same session',
+                            }
+                        ]
+                    }
+                )
+            )
+            rubric['history']['path'] = str(history_file)
+
+            assessment = make_assessment(
+                session_id='sess-123',
+                model_version='gpt-5.4',
+                session_summary='same session',
+                applicability={
+                    'examples': False,
+                    'reasoning': True,
+                    'tool_awareness': True,
+                    'verification': True,
+                },
+                evidence_counts={
+                    'evidence_quotes': 3,
+                    'corrections_or_refinements': 1,
+                    'output_constraints': 1,
+                    'tool_signals': 1,
+                    'verification_signals': 1,
+                },
+            )
+
+            result = ENGINE.finalize(assessment, rubric, save=True)
+            stored = json.loads(history_file.read_text())
+
+        self.assertEqual(result['history_write'], 'updated_existing')
+        self.assertEqual(result['history_session_count'], 1)
+        self.assertEqual(len(stored['sessions']), 1)
+        self.assertEqual(stored['sessions'][0]['session_id'], 'sess-123')
+        self.assertEqual(stored['sessions'][0]['model_version'], 'gpt-5.4')
+        self.assertEqual(stored['sessions'][0]['total'], result['total'])
+
+    def test_trend_ignores_same_session_reassessment(self):
+        rubric = copy.deepcopy(RUBRIC)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            history_file = Path(tmpdir) / 'history.json'
+            history_file.write_text(
+                json.dumps(
+                    {
+                        'sessions': [
+                            {
+                                'date': '2026-04-10',
+                                'session_id': 'sess-older',
+                                'session_fingerprint': 'sha256:older',
+                                'total': 6.2,
+                                'rubric_version': rubric['rubric_version'],
+                            },
+                            {
+                                'date': '2026-04-12',
+                                'session_id': 'sess-current',
+                                'session_fingerprint': 'sha256:current',
+                                'total': 7.1,
+                                'rubric_version': rubric['rubric_version'],
+                            },
+                        ]
+                    }
+                )
+            )
+            rubric['history']['path'] = str(history_file)
+
+            result = ENGINE.finalize(
+                make_assessment(
+                    session_id='sess-current',
+                    session_summary='current session rescored',
+                ),
+                rubric,
+                save=False,
+            )
+
+        self.assertIsNotNone(result['trend'])
+        self.assertEqual(result['trend']['last_total'], 6.2)
+        self.assertEqual(result['trend']['delta'], 0.8)
 
     def test_trend_only_uses_same_rubric_version(self):
         rubric = copy.deepcopy(RUBRIC)

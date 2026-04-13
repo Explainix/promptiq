@@ -12,6 +12,7 @@ High-frequency AI CLI users usually do not need more inspiration. They need shar
 - Was the relevant context supplied early?
 - Were weak answers corrected instead of accepted?
 - Were output constraints explicit enough to verify success?
+- Did the user define how the answer would be checked, tested, or falsified?
 - Were tools and AI-native workflows used when they mattered?
 
 PromptIQ is built to coach those habits directly.
@@ -26,6 +27,8 @@ Run `/score` at the end of a real session to get:
 - a blunt `Why It Is Not Higher` section
 - compatible-session trend tracking for repeat users
 - one next-session drill instead of a pile of generic advice
+
+Run `/rewrite-last` when you want PromptIQ to rewrite your last 1-3 meaningful prompts into stronger, paste-ready versions for the same task.
 
 ## Who It Is For
 
@@ -73,12 +76,15 @@ The `doctor` command tells you:
 - how many local sessions are currently tracked
 - whether your local history is corrupted and needs to be recreated
 
+When available, PromptIQ also stores session identity and model metadata so repeat scoring does not pollute trend lines.
+
 ## Usage
 
 1. Work through a real session.
 2. Run `/score`.
 3. Read `Why It Is Not Higher` before looking at the total.
 4. Apply the `Next Session Drill` in your next working session.
+5. Run `/rewrite-last` when you want PromptIQ to tighten your recent prompts immediately.
 
 If `promptiq.py` or `rubric_v1.json` is missing, run `/install` first.
 
@@ -89,6 +95,7 @@ PromptIQ is designed around patterns strong AI CLI users repeat consistently:
 - one concrete task at a time
 - relevant repo or business context up front
 - explicit success criteria or output format
+- an explicit way to verify whether the answer is actually correct
 - corrective follow-ups when the first answer drifts
 - tool use when the task benefits from search, tests, logs, or docs
 
@@ -97,6 +104,7 @@ This matters because long sessions with vague prompts often feel productive whil
 ## Example Output
 
 See [examples/sample-report.md](examples/sample-report.md) for a representative report.
+See [examples/rewrite-last-sample.md](examples/rewrite-last-sample.md) for a representative `/rewrite-last` result.
 
 ## How Scoring Works
 
@@ -108,6 +116,7 @@ The model still judges the session. The local helper makes the product stricter 
 - confidence determination
 - rubric-compatible trend tracking
 - long-term focus-area detection
+- verification-aware high-score gating
 
 The helper also supports file-based assessment input so large session payloads do not break on shell escaping.
 
