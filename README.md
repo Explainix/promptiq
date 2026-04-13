@@ -1,10 +1,10 @@
 # PromptIQ
 
-A Claude Code plugin that scores your AI proficiency and tracks improvement over time.
+A skill for Claude Code and Codex CLI that scores your AI proficiency and tracks improvement over time.
 
 ## What it does
 
-Run `/score` at the end of any Claude Code session to get:
+Run `/score` at the end of any session to get:
 
 - A score across 8 dimensions of prompt quality (1–10 each)
 - Specific improvement suggestions with quotes from your session
@@ -15,7 +15,10 @@ Run `/score` at the end of any Claude Code session to get:
 ### Claude Code
 
 ```bash
-claude plugin marketplace add https://raw.githubusercontent.com/Explainix/promptiq/main/.claude-plugin/marketplace.json
+# Add the marketplace (one-time)
+claude plugin marketplace add Explainix/promptiq
+
+# Install the plugin
 claude plugin install promptiq
 ```
 
@@ -27,6 +30,10 @@ curl -o ~/.codex/skills/promptiq/SKILL.md \
   https://raw.githubusercontent.com/Explainix/promptiq/main/skills/score/SKILL.md
 ```
 
+### Manual (any AI CLI that supports skills)
+
+Copy `skills/score/SKILL.md` to your skills directory and trigger with `/score`.
+
 ## Usage
 
 At any point during a session, run:
@@ -35,24 +42,28 @@ At any point during a session, run:
 /score
 ```
 
-PromptIQ analyzes your conversation and outputs a scored report.
-
-- Claude Code: history saved to `~/.claude/promptiq/history.json`
-- Codex: history saved to `~/.claude/promptiq/history.json` (same location)
+PromptIQ analyzes your conversation and outputs a scored report. History is saved to `~/.claude/promptiq/history.json`.
 
 ## Dimensions scored
 
 | Dimension | What is evaluated |
 |-----------|------------------|
-| 指令清晰度 | Instructions are specific and unambiguous |
-| 上下文提供 | Background and "why" are provided |
-| 迭代质量 | Follow-ups advance the task rather than repeat it |
-| 任务分解 | Complex tasks are broken into steps |
-| 输出规格 | Format, length, style are explicitly specified |
-| 示例使用 | Few-shot examples used when consistency matters |
-| 推理引导 | Step-by-step thinking elicited for hard problems |
-| 工具意识 | Claude Code features used appropriately |
+| Instruction Clarity | Instructions are specific and unambiguous |
+| Context Provision | Background and "why" are provided |
+| Iteration Quality | Follow-ups advance the task rather than repeat it |
+| Task Decomposition | Complex tasks are broken into steps |
+| Output Specification | Format, length, style are explicitly specified |
+| Example Usage | Few-shot examples used when consistency matters |
+| Reasoning Elicitation | Step-by-step thinking elicited for hard problems |
+| Tool Awareness | AI tool features used appropriately |
 
 ## Privacy
 
 All data is stored locally at `~/.claude/promptiq/history.json`. Nothing is uploaded.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `skills/score/SKILL.md` | Main skill — works in Claude Code and Codex CLI |
+| `.claude-plugin/` | Claude Code plugin manifest |

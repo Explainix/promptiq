@@ -25,14 +25,14 @@ Score the user on these 8 dimensions. Be honest and calibrated — a 10 means ex
 
 | Dimension | Key | What to evaluate |
 |-----------|-----|-----------------|
-| 指令清晰度 | clarity | Instructions are specific and unambiguous. Penalize vague requests like "make it better" with no criteria. |
-| 上下文提供 | context | Background and "why" are provided. Penalize bare requests with no motivation or constraints. |
-| 迭代质量 | iteration | Follow-ups advance the task. Penalize repeating the same ask, or accepting wrong answers without correction. |
-| 任务分解 | decomposition | Complex tasks are broken into steps. Penalize single mega-prompts that try to do everything at once. |
-| 输出规格 | output_spec | Format, length, style are explicitly specified. Penalize accepting whatever format Claude defaults to. |
-| 示例使用 | examples | Few-shot examples used when consistency matters. N/A (score 5) if session had no tasks requiring consistency. |
-| 推理引导 | reasoning | Step-by-step thinking elicited for hard problems. N/A (score 5) if session had no complex reasoning tasks. |
-| 工具意识 | tool_awareness | Claude Code features used appropriately (file refs, @mentions, slash commands). N/A (score 5) if not applicable. |
+| Instruction Clarity | clarity | Instructions are specific and unambiguous. Penalize vague requests like "make it better" with no criteria. |
+| Context Provision | context | Background and "why" are provided. Penalize bare requests with no motivation or constraints. |
+| Iteration Quality | iteration | Follow-ups advance the task. Penalize repeating the same ask, or accepting wrong answers without correction. |
+| Task Decomposition | decomposition | Complex tasks are broken into steps. Penalize single mega-prompts that try to do everything at once. |
+| Output Specification | output_spec | Format, length, style are explicitly specified. Penalize accepting whatever format the AI defaults to. |
+| Example Usage | examples | Few-shot examples used when consistency matters. N/A (score 5) if session had no tasks requiring consistency. |
+| Reasoning Elicitation | reasoning | Step-by-step thinking elicited for hard problems. N/A (score 5) if session had no complex reasoning tasks. |
+| Tool Awareness | tool_awareness | AI tool features used appropriately (file refs, @mentions, slash commands). N/A (score 5) if not applicable. |
 
 ## Step 3.5: Compute total score
 
@@ -58,23 +58,23 @@ Output the report in this exact format:
   PromptIQ Score
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  总分：[X.X] / 10  [trend line if history exists, e.g. （上次：6.5，+0.7）]
+  Total:                [X.X] / 10  [trend line if history exists, e.g. (last: 6.5, +0.7)]
 
-  指令清晰度    [bar]  [N]/10
-  上下文提供    [bar]  [N]/10
-  迭代质量      [bar]  [N]/10
-  任务分解      [bar]  [N]/10
-  输出规格      [bar]  [N]/10
-  示例使用      [bar]  [N]/10
-  推理引导      [bar]  [N]/10
-  工具意识      [bar]  [N]/10
+  Instruction Clarity   [bar]  [N]/10
+  Context Provision     [bar]  [N]/10
+  Iteration Quality     [bar]  [N]/10
+  Task Decomposition    [bar]  [N]/10
+  Output Specification  [bar]  [N]/10
+  Example Usage         [bar]  [N]/10
+  Reasoning Elicitation [bar]  [N]/10
+  Tool Awareness        [bar]  [N]/10
 
-  亮点
+  Highlight
   [One specific thing the user did well, with a direct quote from their message]
 
-  改进建议
-  1. [Specific suggestion] — 例如你在第N条消息说了"[exact quote]"，
-     更好的方式是"[rewritten version]"
+  Suggestions
+  1. [Specific suggestion] — e.g. in message N you said "[exact quote]",
+     a better approach would be "[rewritten version]"
   2. [Second suggestion with quote and rewrite]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -87,19 +87,19 @@ Progress bar rendering rules:
 
 Trend line rules:
 - No history: omit trend entirely
-- Has history: show last total and delta (e.g. （上次：6.5，+0.7） or （上次：7.0，-0.3）)
+- Has history: show last total and delta (e.g. (last: 6.5, +0.7) or (last: 7.0, -0.3))
 
 If 3+ sessions exist, add after the report:
 
-  近期趋势（最近5次）
+  Recent Trend (last 5 sessions)
   [list last up to 5 sessions as: YYYY-MM-DD  X.X  (weakest dimension that session = lowest scoring key)]
 
-  重点改进方向：[the dimension with the lowest average score]
+  Focus area: [the dimension with the lowest average score]
 
 If 10+ sessions exist, also add:
 
-  你的 AI 使用风格
-  [2-3 sentence profile based on long-term patterns, e.g. "你擅长任务分解，但持续在输出规格上失分——你很少告诉 Claude 想要什么格式。"]
+  Your AI Usage Profile
+  [2-3 sentence profile based on long-term patterns, e.g. "You excel at task decomposition but consistently lose points on output specification — you rarely tell the AI what format you want."]
 
 ## Step 5: Save to history
 
