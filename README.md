@@ -12,14 +12,19 @@ Run `/score` at the end of any Claude Code session to get:
 
 ## Installation
 
+### Claude Code
+
 ```bash
+claude plugin marketplace add https://raw.githubusercontent.com/Explainix/promptiq/main/.claude-plugin/marketplace.json
 claude plugin install promptiq
 ```
 
-Or from local path during development:
+### Codex CLI
 
 ```bash
-claude plugin install /path/to/promptiq
+mkdir -p ~/.codex/skills/promptiq
+curl -o ~/.codex/skills/promptiq/SKILL.md \
+  https://raw.githubusercontent.com/Explainix/promptiq/main/skills/score/SKILL.md
 ```
 
 ## Usage
@@ -30,7 +35,10 @@ At any point during a session, run:
 /score
 ```
 
-PromptIQ analyzes your conversation and outputs a scored report. History is saved to `~/.claude/promptiq/history.json`.
+PromptIQ analyzes your conversation and outputs a scored report.
+
+- Claude Code: history saved to `~/.claude/promptiq/history.json`
+- Codex: history saved to `~/.claude/promptiq/history.json` (same location)
 
 ## Dimensions scored
 
