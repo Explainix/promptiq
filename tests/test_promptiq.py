@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 import importlib.util
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -265,6 +266,66 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertIsNotNone(result['trend'])
         self.assertEqual(result['trend']['last_total'], 7.1)
         self.assertEqual(result['trend']['delta'], -0.1)
+
+    def test_history_path_uses_promptiq_home_override(self):
+        rubric = copy.deepcopy(RUBRIC)
+        with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': '/tmp/custom-promptiq'}, clear=False):
+            path = ENGINE.history_path(rubric)
+
+        self.assertEqual(path, Path('/tmp/custom-promptiq/history.json'))
+
+    def test_history_path_prefers_explicit_history_override(self):
+        rubric = copy.deepcopy(RUBRIC)
+        with patch.dict(
+            ENGINE.os.environ,
+            {
+                'PROMPTIQ_HOME': '/tmp/custom-promptiq',
+                'PROMPTIQ_HISTORY_PATH': '/tmp/promptiq-state/history.json',
+            },
+            clear=False,
+        ):
+            path = ENGINE.history_path(rubric)
+
+        self.assertEqual(path, Path('/tmp/promptiq-state/history.json'))
+
+    def test_doctor_reports_ready_installation(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            helper = root / 'promptiq.py'
+            rubric_path = root / 'rubric_v1.json'
+            history_file = root / 'history.json'
+
+            helper.write_text('#!/usr/bin/env python3\n', encoding='utf-8')
+            rubric_path.write_text(json.dumps(RUBRIC), encoding='utf-8')
+            history_file.write_text(
+                json.dumps({'sessions': [{'total': 7.0, 'rubric_version': RUBRIC['rubric_version']}]})
+            )
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                report = ENGINE.doctor(helper, rubric_path)
+
+        self.assertEqual(report['status'], 'ok')
+        self.assertEqual(report['history_session_count'], 1)
+        self.assertEqual(report['rubric_version'], RUBRIC['rubric_version'])
+        self.assertEqual(report['issues'], [])
+
+    def test_doctor_flags_corrupted_history(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            helper = root / 'promptiq.py'
+            rubric_path = root / 'rubric_v1.json'
+            history_file = root / 'history.json'
+
+            helper.write_text('#!/usr/bin/env python3\n', encoding='utf-8')
+            rubric_path.write_text(json.dumps(RUBRIC), encoding='utf-8')
+            history_file.write_text('{broken', encoding='utf-8')
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                report = ENGINE.doctor(helper, rubric_path)
+
+        self.assertEqual(report['status'], 'warning')
+        self.assertIn('history_corrupted', report['issues'])
+        self.assertEqual(report['history_warning'], 'history_corrupted')
 
     def test_validation_rejects_unknown_dimension(self):
         assessment = make_assessment()

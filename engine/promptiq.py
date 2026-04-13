@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -28,9 +29,13 @@ DIMENSION_LABELS = {
     "tool_awareness": "Tool Awareness",
 }
 
+DEFAULT_PROMPTIQ_HOME = "~/.promptiq"
+DEFAULT_HISTORY_PATH = f"{DEFAULT_PROMPTIQ_HOME}/history.json"
+DEFAULT_RUBRIC_FILENAME = "rubric_v1.json"
+
 
 def load_json(path: Path) -> dict[str, Any]:
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -166,16 +171,30 @@ def apply_caps(raw_total: float, assessment: dict[str, Any], rubric: dict[str, A
     return round1(capped), reasons
 
 
-def history_path(rubric: dict[str, Any]) -> Path:
-    raw = rubric["history"]["path"]
+def resolve_promptiq_home() -> Path:
+    return Path(os.path.expanduser(os.environ.get("PROMPTIQ_HOME", DEFAULT_PROMPTIQ_HOME)))
+
+
+def resolved_history_path(raw: str = DEFAULT_HISTORY_PATH) -> Path:
+    override = os.environ.get("PROMPTIQ_HISTORY_PATH")
+    if override:
+        return Path(os.path.expanduser(override))
+
+    promptiq_home = os.environ.get("PROMPTIQ_HOME")
+    if promptiq_home and raw == DEFAULT_HISTORY_PATH:
+        return Path(os.path.expanduser(promptiq_home)) / "history.json"
     return Path(os.path.expanduser(raw))
+
+
+def history_path(rubric: dict[str, Any]) -> Path:
+    return resolved_history_path(rubric["history"]["path"])
 
 
 def load_history(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"sessions": []}
     try:
-        with path.open() as f:
+        with path.open(encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError:
         return {
@@ -186,7 +205,7 @@ def load_history(path: Path) -> dict[str, Any]:
 
 def save_history(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as f:
+    with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
@@ -327,6 +346,64 @@ def compute_trend(history: dict[str, Any], rubric_version: str, total: float) ->
     }
 
 
+def doctor(helper_path: Path, rubric_path: Path) -> dict[str, Any]:
+    helper = helper_path.expanduser()
+    rubric_file = rubric_path.expanduser()
+    issues: list[str] = []
+    rubric_version: str | None = None
+    rubric_error: str | None = None
+    history_file = resolved_history_path()
+
+    helper_exists = helper.exists()
+    if not helper_exists:
+        issues.append("helper_missing")
+
+    rubric_exists = rubric_file.exists()
+    if not rubric_exists:
+        issues.append("rubric_missing")
+    else:
+        try:
+            rubric = load_json(rubric_file)
+        except (OSError, json.JSONDecodeError) as exc:
+            rubric_error = str(exc)
+            issues.append("rubric_unreadable")
+        else:
+            rubric_version = rubric.get("rubric_version")
+            history_file = history_path(rubric)
+
+    history = load_history(history_file)
+    history_warning = history.get("_warning")
+    if history_warning == "history_corrupted":
+        issues.append("history_corrupted")
+
+    if any(issue in {"helper_missing", "rubric_missing", "rubric_unreadable"} for issue in issues):
+        status = "action_needed"
+        next_step = "Run /install to restore the local helper files."
+    elif "history_corrupted" in issues:
+        status = "warning"
+        next_step = "Run /score once to recreate clean local history."
+    else:
+        status = "ok"
+        next_step = "PromptIQ is ready. Run /score after a real working session."
+
+    return {
+        "status": status,
+        "issues": issues,
+        "next_step": next_step,
+        "promptiq_home": str(resolve_promptiq_home()),
+        "helper_path": str(helper),
+        "helper_exists": helper_exists,
+        "rubric_path": str(rubric_file),
+        "rubric_exists": rubric_exists,
+        "rubric_version": rubric_version,
+        "rubric_error": rubric_error,
+        "history_path": str(history_file),
+        "history_exists": history_file.exists(),
+        "history_session_count": len(history.get("sessions", [])),
+        "history_warning": history_warning,
+    }
+
+
 def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> dict[str, Any]:
     validate_assessment(assessment)
     dimensions = assessment["dimensions"]
@@ -397,18 +474,22 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["finalize"])
+    parser.add_argument("command", choices=["doctor", "finalize"])
     parser.add_argument("--assessment-json")
     parser.add_argument("--assessment-file")
-    parser.add_argument("--rubric", default=str(Path(__file__).with_name("rubric_v1.json")))
+    parser.add_argument("--rubric", default=str(Path(__file__).with_name(DEFAULT_RUBRIC_FILENAME)))
     parser.add_argument("--save", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+
+    if args.command == "doctor":
+        result = doctor(Path(__file__), Path(args.rubric))
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return
 
     assessment = load_assessment_payload(args.assessment_json, args.assessment_file)
     rubric = load_json(Path(args.rubric))
-
     if args.command == "finalize":
         result = finalize(assessment, rubric, args.save)
         print(json.dumps(result, ensure_ascii=False, indent=2))

@@ -19,13 +19,14 @@ Review only user messages. Evaluate the user's steering quality, not the assista
    Read [references/assessment-schema.md](references/assessment-schema.md) for the required assessment keys and field meanings.
 
 2. Use the local helper.
-   Check `~/.promptiq/promptiq.py` and `~/.promptiq/rubric_v1.json`.
+   Respect `PROMPTIQ_HOME` when it is set. Otherwise use `~/.promptiq`.
+   Check the resolved helper directory for `promptiq.py` and `rubric_v1.json`.
    If either file is missing, stop and tell the user to run `/install`.
    Write the assessment JSON to `/tmp/promptiq-assessment.json`.
    Run:
 
 ```bash
-python3 ~/.promptiq/promptiq.py finalize \
+python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" finalize \
   --assessment-file /tmp/promptiq-assessment.json \
   --save
 ```

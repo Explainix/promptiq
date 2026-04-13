@@ -2,52 +2,48 @@
 
 Strict session reviews for power users collaborating with AI.
 
-PromptIQ reviews one session at a time. It does not claim to measure your permanent AI proficiency. It scores how well you steered the AI in the current session, explains why the score is not higher, and tracks trends only when sessions are compatible with the same rubric generation.
+PromptIQ does not claim to measure your permanent AI proficiency. It reviews one working session at a time, scores how well you steered the model, explains why the score is not higher, and stores comparable history only when the rubric generation matches.
 
-## What It Does
+## Why This Exists
 
-Run `/score` at the end of a session to get:
+High-frequency AI CLI users usually do not need more inspiration. They need sharper feedback on habits that actually change outcomes:
 
-- A strict review across 8 collaboration dimensions
-- A deterministic total with caps for weak evidence and low-complexity sessions
-- Confidence and complexity labels beside the score
-- A blunt "why it is not higher" explanation
-- Recent compatible-session trend tracking for repeat users
-- A next-session drill
+- Was the request scoped tightly enough?
+- Was the relevant context supplied early?
+- Were weak answers corrected instead of accepted?
+- Were output constraints explicit enough to verify success?
+- Were tools and AI-native workflows used when they mattered?
 
-## Product Positioning
+PromptIQ is built to coach those habits directly.
 
-PromptIQ is:
+## What You Get
 
-- A strict AI collaboration coach
-- For high-frequency AI CLI users
-- Focused on session quality, not vague long-term "proficiency"
+Run `/score` at the end of a real session to get:
 
-This matters because a session review can be calibrated. A generic proficiency claim cannot.
+- a strict review across 8 collaboration dimensions
+- a deterministic total with caps for weak evidence and low-complexity sessions
+- confidence and complexity labels beside the score
+- a blunt `Why It Is Not Higher` section
+- compatible-session trend tracking for repeat users
+- one next-session drill instead of a pile of generic advice
 
-## Repository Shape
+## Who It Is For
 
-```text
-promptiq/
-  README.md
-  examples/
-  package.json
-  .claude-plugin/
-  skills/
-    score/SKILL.md
-    score/references/
-    install/SKILL.md
-    install/scripts/install_promptiq.py
-  engine/
-    promptiq.py
-    rubric_v1.json
-  fixtures/
-  tests/
-```
+PromptIQ is for users who:
 
-## Installation
+- use Codex, Claude Code, or similar AI CLIs frequently
+- want sharper steering, not softer praise
+- care about repeatable prompting habits more than one-off clever prompts
 
-### AI-Native Install
+PromptIQ is not for:
+
+- trivial one-liner sessions
+- people looking for a generic personality test
+- teams that want full prompt regression testing across models and datasets
+
+## Quick Start
+
+### AI-native install
 
 Paste this into your AI CLI:
 
@@ -55,17 +51,7 @@ Paste this into your AI CLI:
 Read https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/SKILL.md and install PromptIQ. Do not ask follow-up questions unless a command fails.
 ```
 
-That prompt should make the agent:
-
-- download and run the installer script
-- install `~/.promptiq/promptiq.py`
-- install `~/.promptiq/rubric_v1.json`
-- install the `promptiq` Codex skill bundle when `codex` is present
-- install the Claude plugin when `claude` is present
-
-### Quick Start
-
-Direct shell bootstrap:
+### Shell install
 
 ```bash
 curl -fsSL -o /tmp/install_promptiq.py \
@@ -73,61 +59,53 @@ curl -fsSL -o /tmp/install_promptiq.py \
 python3 /tmp/install_promptiq.py
 ```
 
-This installs:
-
-- `~/.promptiq/promptiq.py`
-- `~/.promptiq/rubric_v1.json`
-- the `promptiq` Codex skill bundle when `codex` is present
-- the Claude plugin when `claude` is present
-
-### Agent-driven install
-
-Use the install skill URL directly:
-
-```text
-https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/SKILL.md
-```
-
-### Claude Code
-
-1. Install the plugin:
+### Verify the install
 
 ```bash
-claude plugin marketplace add Explainix/promptiq
-claude plugin install promptiq
+python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" doctor
 ```
 
-2. Run `/install` once to place the local helper in `~/.promptiq/`.
+The `doctor` command tells you:
 
-### Codex CLI
-
-The quick-start installer above is recommended.
-
-Manual fallback:
-
-```bash
-python3 /tmp/install_promptiq.py
-```
-
-Restart Codex after installing the skill.
+- where PromptIQ is installed
+- whether the helper and rubric are present
+- where history will be stored
+- how many local sessions are currently tracked
+- whether your local history is corrupted and needs to be recreated
 
 ## Usage
 
-- Run `/score` after a real working session, not a trivial one-liner.
-- If `~/.promptiq/promptiq.py` is missing, run `/install` first.
+1. Work through a real session.
+2. Run `/score`.
+3. Read `Why It Is Not Higher` before looking at the total.
+4. Apply the `Next Session Drill` in your next working session.
+
+If `promptiq.py` or `rubric_v1.json` is missing, run `/install` first.
+
+## What Strong Sessions Usually Look Like
+
+PromptIQ is designed around patterns strong AI CLI users repeat consistently:
+
+- one concrete task at a time
+- relevant repo or business context up front
+- explicit success criteria or output format
+- corrective follow-ups when the first answer drifts
+- tool use when the task benefits from search, tests, logs, or docs
+
+This matters because long sessions with vague prompts often feel productive while actually producing weak steering. PromptIQ is intentionally strict about that difference.
 
 ## Example Output
 
-See [examples/sample-report.md](examples/sample-report.md) for a representative review.
+See [examples/sample-report.md](examples/sample-report.md) for a representative report.
 
 ## How Scoring Works
 
-The model still judges the session. The local helper makes the system stricter and more stable by handling:
+The model still judges the session. The local helper makes the product stricter and more stable by handling:
 
 - N/A filtering
 - total calculation
 - score caps
-- confidence calculation
+- confidence determination
 - rubric-compatible trend tracking
 - long-term focus-area detection
 
@@ -135,12 +113,37 @@ The helper also supports file-based assessment input so large session payloads d
 
 ## Calibration Rules
 
-- Short sessions are capped
-- Low-complexity sessions are capped
-- Low-confidence sessions are capped
-- Scores above 7.5 require evidence
-- Scores above 8.5 are intentionally rare
+- short sessions are capped
+- low-complexity sessions are capped
+- low-confidence sessions are capped
+- scores above `7.5` require evidence
+- scores above `8.5` are intentionally rare
 
 ## Privacy
 
-PromptIQ stores history locally at `~/.promptiq/history.json`. Nothing is uploaded by PromptIQ itself.
+PromptIQ stores history locally at `~/.promptiq/history.json` unless `PROMPTIQ_HOME` or `PROMPTIQ_HISTORY_PATH` says otherwise. PromptIQ does not upload that history by itself.
+
+## Local Development
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 engine/promptiq.py doctor
+```
+
+If you change calibration or report behavior, update fixtures and tests in the same pull request.
+
+## Repo Layout
+
+```text
+promptiq/
+  engine/
+  examples/
+  fixtures/
+  skills/
+  tests/
+```
+
+## Related Docs
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [docs/user-research.md](docs/user-research.md)

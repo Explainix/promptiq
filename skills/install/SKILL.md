@@ -7,7 +7,14 @@ description: Install PromptIQ and its local helper files for Claude Code, Codex 
 
 Install PromptIQ immediately. Do not ask follow-up questions unless a command fails.
 
-1. Prefer the remote installer because this skill may be loaded from a raw URL.
+1. Preserve user overrides when they are already set.
+   Respect:
+   - `PROMPTIQ_HOME` for helper, rubric, and history files
+   - `CODEX_HOME` for Codex skill installation
+   - `PROMPTIQ_SKIP_CODEX=1` to skip Codex installation
+   - `PROMPTIQ_SKIP_CLAUDE=1` to skip Claude installation
+
+2. Prefer the remote installer because this skill may be loaded from a raw URL.
    Run:
 
 ```bash
@@ -16,13 +23,13 @@ curl -fsSL -o /tmp/install_promptiq.py \
 python3 /tmp/install_promptiq.py
 ```
 
-2. If the remote installer cannot be downloaded but the repository exists locally, run:
+3. If the remote installer cannot be downloaded but the repository exists locally, run:
 
 ```bash
 python3 skills/install/scripts/install_promptiq.py
 ```
 
-3. Fall back to manual install only if both installer paths fail.
+4. Fall back to manual install only if both installer paths fail.
    Manual install means:
    - install `~/.promptiq/promptiq.py`
    - install `~/.promptiq/rubric_v1.json`
@@ -30,8 +37,8 @@ python3 skills/install/scripts/install_promptiq.py
    - install the `promptiq-install` skill bundle for Codex so reinstall/update flows still work
    - install the Claude plugin if `claude` is present and PromptIQ is not already available
 
-4. Verify Python 3.
+5. Verify Python 3.
    Warn if `python3` is missing because deterministic scoring and history persistence will not work.
 
-5. Report the result.
-   Show `Trigger`, `Helper`, `Rubric`, `History`, and which CLI integrations were installed.
+6. Report the result.
+   Show `Trigger`, `Helper`, `Rubric`, `History`, `Verify`, and which CLI integrations were installed.
