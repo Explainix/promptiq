@@ -19,9 +19,35 @@ Analyze every message the user sent in this session. Focus on:
 - Whether they elicited step-by-step reasoning
 - Whether they used Claude Code features (file references, slash commands, etc.)
 
-## Step 2: Score each dimension (1–10)
+## Step 2: Determine N/A dimensions FIRST
 
-Score the user on these 8 dimensions. Be honest and calibrated — a 10 means expert-level, a 5 means average, a 1 means complete beginner. Most users score 4–7.
+Before scoring anything, answer these three questions by scanning the conversation:
+
+**Example Usage — is it applicable?**
+Ask: did the session contain any task where the user needed to generate multiple items in a consistent format (e.g. writing 5 product descriptions, generating test cases, producing structured data)?
+- YES → score it (1–10)
+- NO → mark N/A, exclude from total
+
+**Reasoning Elicitation — is it applicable?**
+Ask: did the session contain any task that genuinely benefits from step-by-step reasoning — complex debugging, multi-step math, architectural trade-off analysis, ambiguous problem diagnosis?
+- YES → score it (1–10)
+- NO → mark N/A, exclude from total
+
+**Tool Awareness — is it applicable?**
+Ask: was the session conducted in an AI CLI where tool features (file references, @mentions, slash commands, structured outputs) were available and relevant to the tasks?
+- YES → score it (1–10)
+- NO → mark N/A, exclude from total
+
+Write your N/A decisions explicitly before proceeding:
+```
+Example Usage:         [applicable / N/A] — reason
+Reasoning Elicitation: [applicable / N/A] — reason
+Tool Awareness:        [applicable / N/A] — reason
+```
+
+## Step 3: Score each dimension (1–10)
+
+Score the user on the 5 always-scored dimensions plus any N/A-eligible ones you marked applicable above. Be honest and calibrated — a 10 means expert-level, a 5 means average, a 1 means complete beginner. Most users score 4–7.
 
 | Dimension | Key | What to evaluate |
 |-----------|-----|-----------------|
@@ -30,11 +56,11 @@ Score the user on these 8 dimensions. Be honest and calibrated — a 10 means ex
 | Iteration Quality | iteration | Follow-ups advance the task rather than repeat it. Score high if the user corrects errors precisely, refines scope, or builds on previous output. Score low if they repeat the same ask verbatim or accept clearly wrong answers without pushback. |
 | Task Decomposition | decomposition | Complex tasks are broken into focused steps rather than crammed into one mega-prompt. Score high if the user sequences requests logically. Score low if a single prompt tries to do 5 things at once. |
 | Output Specification | output_spec | Format, length, tone, or style are explicitly specified. Penalize accepting whatever the AI defaults to when the format clearly matters (e.g. asking for code but not specifying language, or asking for a summary with no length constraint). |
-| Example Usage | examples | **N/A-eligible.** Few-shot examples provided when output consistency matters (e.g. generating multiple items in a specific format). Mark as N/A if the session had no tasks where examples would have helped — do not score, exclude from total. |
-| Reasoning Elicitation | reasoning | **N/A-eligible.** User explicitly asks the AI to think step-by-step, verify its answer, or reason before responding — on tasks where this would improve quality. Mark as N/A if the session had no complex reasoning tasks — do not score, exclude from total. |
-| Tool Awareness | tool_awareness | **N/A-eligible.** AI tool features used appropriately (file refs, @mentions, slash commands, structured outputs). Mark as N/A if the session context made tool use irrelevant — do not score, exclude from total. |
+| Example Usage | examples | *(Only if marked applicable above.)* Few-shot examples provided when output consistency matters. |
+| Reasoning Elicitation | reasoning | *(Only if marked applicable above.)* User explicitly asks the AI to think step-by-step, verify its answer, or reason before responding. |
+| Tool Awareness | tool_awareness | *(Only if marked applicable above.)* AI tool features used appropriately (file refs, @mentions, slash commands, structured outputs). |
 
-## Step 3.5: Compute total score
+## Step 4: Compute total score
 
 Only include dimensions that were actually scored (exclude any marked N/A). Sum the scored dimensions and divide by the count of scored dimensions. Round to 1 decimal place. Call this value TOTAL.
 
@@ -42,7 +68,7 @@ Example: if examples and reasoning are N/A, sum the 6 scored dimensions and divi
 
 For progress bars, use round(score) to get an integer 1–10, then render that many █ characters followed by (10 - round(score)) ░ characters. For N/A dimensions, render `──────────  N/A`.
 
-## Step 3: Read history file
+## Step 5: Read history file
 
 Use the Bash tool to read ~/.promptiq/history.json:
 
@@ -52,7 +78,7 @@ cat ~/.promptiq/history.json 2>/dev/null || echo "NO_HISTORY"
 
 If the output is NO_HISTORY, this is the user's first session.
 
-## Step 4: Render the report
+## Step 6: Render the report
 
 Output the report in this exact format:
 
@@ -103,11 +129,11 @@ If 10+ sessions exist, also add:
   Your AI Usage Profile
   [2-3 sentence profile based on long-term patterns, e.g. "You excel at task decomposition but consistently lose points on output specification — you rarely tell the AI what format you want."]
 
-## Step 5: Save to history
+## Step 7: Save to history
 
 Use the Bash tool to append this session to history.
 
-First, compute the total score as the average of all 8 dimension scores (round to 1 decimal).
+First, compute the total score as the average of scored dimensions only (round to 1 decimal).
 
 Then construct and run the following, replacing all ACTUAL_* placeholders with real values before executing:
 
