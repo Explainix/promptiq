@@ -194,6 +194,8 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertEqual(doctor['import_session_count'], 2)
         self.assertEqual(doctor['imports_path'], str(root / 'imports'))
         self.assertIsNone(doctor['imports_warning'])
+        self.assertEqual(doctor['launcher_path'], str(root / 'promptiq'))
+        self.assertEqual(doctor['bin_launcher_path'], str(Path.home() / '.local' / 'bin' / 'promptiq'))
 
     def test_list_imports_flags_unreadable_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -420,6 +422,8 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertIn('PromptIQ Session Replay', stored_replay)
         self.assertIn('score-import', prepared['next_command'])
         self.assertIn('--assessment-file', prepared['next_command'])
+        self.assertNotIn('python3', prepared['next_command'])
+        self.assertIn('"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq"', prepared['next_command'])
         self.assertIn('Edit the assessment_file in place', '\n'.join(prepared['notes']))
 
     def test_main_supports_prepare_import_review_without_session_id(self):
@@ -889,22 +893,46 @@ class PromptIQEngineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             helper = root / 'promptiq.py'
+            launcher = root / 'promptiq'
             rubric_path = root / 'rubric_v1.json'
             history_file = root / 'history.json'
+            bin_dir = root / 'bin'
+            bin_launcher = bin_dir / 'promptiq'
 
             helper.write_text('#!/usr/bin/env python3\n', encoding='utf-8')
+            launcher.write_text('#!/bin/sh\n', encoding='utf-8')
             rubric_path.write_text(json.dumps(RUBRIC), encoding='utf-8')
             history_file.write_text(
                 json.dumps({'sessions': [{'total': 7.0, 'rubric_version': RUBRIC['rubric_version']}]})
             )
+            bin_dir.mkdir(parents=True)
+            bin_launcher.write_text('#!/bin/sh\n', encoding='utf-8')
 
-            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
-                report = ENGINE.doctor(helper, rubric_path)
+            def fake_which(name: str):
+                if name == 'promptiq':
+                    return str(bin_launcher)
+                return None
+
+            with patch.dict(
+                ENGINE.os.environ,
+                {
+                    'PROMPTIQ_HOME': str(root),
+                    'PROMPTIQ_BIN_DIR': str(bin_dir),
+                },
+                clear=False,
+            ):
+                with patch.object(ENGINE.shutil, 'which', side_effect=fake_which):
+                    report = ENGINE.doctor(helper, rubric_path)
 
         self.assertEqual(report['status'], 'ok')
         self.assertEqual(report['history_session_count'], 1)
         self.assertEqual(report['rubric_version'], RUBRIC['rubric_version'])
         self.assertEqual(report['issues'], [])
+        self.assertEqual(report['launcher_path'], str(launcher))
+        self.assertTrue(report['launcher_exists'])
+        self.assertEqual(report['bin_launcher_path'], str(bin_launcher))
+        self.assertTrue(report['bin_launcher_exists'])
+        self.assertTrue(report['launcher_in_path'])
 
     def test_doctor_flags_corrupted_history(self):
         with tempfile.TemporaryDirectory() as tmpdir:

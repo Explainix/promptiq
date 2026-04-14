@@ -10,6 +10,7 @@ Install PromptIQ immediately. Do not ask follow-up questions unless a command fa
 1. Preserve user overrides when they are already set.
    Respect:
    - `PROMPTIQ_HOME` for helper, rubric, and history files
+   - `PROMPTIQ_BIN_DIR` for the `promptiq` launcher install path
    - `CODEX_HOME` for Codex skill installation
    - `PROMPTIQ_SKIP_CODEX=1` to skip Codex installation
    - `PROMPTIQ_SKIP_CLAUDE=1` to skip Claude installation
@@ -18,21 +19,20 @@ Install PromptIQ immediately. Do not ask follow-up questions unless a command fa
    Run:
 
 ```bash
-curl -fsSL -o /tmp/install_promptiq.py \
-  https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/scripts/install_promptiq.py
-python3 /tmp/install_promptiq.py
+curl -fsSL https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/scripts/install_promptiq.sh | sh
 ```
 
 3. If the remote installer cannot be downloaded but the repository exists locally, run:
 
 ```bash
-python3 skills/install/scripts/install_promptiq.py
+sh skills/install/scripts/install_promptiq.sh
 ```
 
 4. Fall back to manual install only if both installer paths fail.
    Manual install means:
    - install `~/.promptiq/promptiq.py`
    - install `~/.promptiq/rubric_v1.json`
+   - install a `promptiq` launcher script
    - install the full `promptiq` Codex skill bundle, including `references/`
    - install the `promptiq-score-import` skill bundle for Codex so imported sessions can be reviewed after replay/import
    - install the `promptiq-install` skill bundle for Codex so reinstall/update flows still work
@@ -43,4 +43,4 @@ python3 skills/install/scripts/install_promptiq.py
    Warn if `python3` is missing because deterministic scoring and history persistence will not work.
 
 6. Report the result.
-   Show `Trigger`, `Helper`, `Rubric`, `History`, `Imports`, `Verify`, and which CLI integrations were installed.
+   Show `Trigger`, `Command`, `Launcher`, `Fallback`, `Helper`, `Rubric`, `History`, `Imports`, `Verify`, and which CLI integrations were installed.

@@ -17,6 +17,7 @@ RAW_BASE = 'https://raw.githubusercontent.com/Explainix/promptiq/main'
 REPO_ROOT = Path(__file__).resolve().parents[3]
 HELPER_LOCAL = REPO_ROOT / 'engine' / 'promptiq.py'
 RUBRIC_LOCAL = REPO_ROOT / 'engine' / 'rubric_v1.json'
+SHELL_INSTALLER_LOCAL = REPO_ROOT / 'skills' / 'install' / 'scripts' / 'install_promptiq.sh'
 
 SKILL_BUNDLES = {
     'promptiq': [
@@ -59,6 +60,11 @@ SKILL_BUNDLES = {
             'skills/install/scripts/install_promptiq.py',
             'scripts/install_promptiq.py',
         ),
+        (
+            SHELL_INSTALLER_LOCAL,
+            'skills/install/scripts/install_promptiq.sh',
+            'scripts/install_promptiq.sh',
+        ),
     ],
     'promptiq-rewrite-last': [
         (
@@ -98,6 +104,15 @@ def resolve_promptiq_home(explicit: str | None = None) -> Path:
     return Path.home() / '.promptiq'
 
 
+def resolve_promptiq_bin_dir(explicit: str | None = None) -> Path:
+    if explicit:
+        return Path(explicit).expanduser()
+    override = os.environ.get('PROMPTIQ_BIN_DIR')
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / '.local' / 'bin'
+
+
 def resolve_codex_home(explicit: str | None = None) -> Path | None:
     if explicit:
         return Path(explicit).expanduser()
@@ -129,6 +144,44 @@ def install_bundle(dest_root: Path, files: list[tuple[Path, str, str]]) -> str:
 def mark_executable(path: Path) -> None:
     mode = path.stat().st_mode
     path.chmod(mode | stat.S_IXUSR)
+
+
+def render_launcher_script(default_promptiq_home: Path) -> str:
+    resolved_home = default_promptiq_home.expanduser()
+    return f"""#!/bin/sh
+PROMPTIQ_HOME="${{PROMPTIQ_HOME:-{resolved_home}}}"
+exec python3 "$PROMPTIQ_HOME/promptiq.py" "$@"
+"""
+
+
+def install_launcher(helper_dir: Path, bin_dir: Path | None = None) -> dict[str, str]:
+    helper_launcher = helper_dir / 'promptiq'
+    write_text(helper_launcher, render_launcher_script(helper_dir))
+    mark_executable(helper_launcher)
+
+    result = {
+        'helper_launcher': str(helper_launcher),
+        'helper_launcher_status': 'installed',
+        'bin_launcher': str(helper_launcher),
+        'bin_launcher_status': 'helper_only',
+        'bin_dir_on_path': 'false',
+    }
+
+    if bin_dir is None:
+        return result
+
+    bin_launcher = bin_dir.expanduser() / 'promptiq'
+    write_text(bin_launcher, render_launcher_script(helper_dir))
+    mark_executable(bin_launcher)
+    path_entries = {Path(entry).expanduser() for entry in os.environ.get('PATH', '').split(os.pathsep) if entry}
+    result.update(
+        {
+            'bin_launcher': str(bin_launcher),
+            'bin_launcher_status': 'installed',
+            'bin_dir_on_path': 'true' if bin_launcher.parent in path_entries else 'false',
+        }
+    )
+    return result
 
 
 def run_command(args: list[str]) -> tuple[bool, str]:
@@ -181,6 +234,7 @@ def install_codex_skill(codex_home: Path | None = None, skip: bool = False) -> s
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='Install PromptIQ helper files and optional CLI integrations.')
     parser.add_argument('--promptiq-home', help='Install helper files into this directory instead of ~/.promptiq.')
+    parser.add_argument('--bin-dir', help='Install the promptiq launcher into this directory instead of ~/.local/bin.')
     parser.add_argument('--codex-home', help='Install Codex skills into this directory instead of ~/.codex.')
     parser.add_argument('--skip-codex', action='store_true', help='Skip installing the Codex skill bundles.')
     parser.add_argument('--skip-claude', action='store_true', help='Skip installing the Claude plugin.')
@@ -191,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     helper_dir = resolve_promptiq_home(args.promptiq_home)
+    bin_dir = resolve_promptiq_bin_dir(args.bin_dir)
     codex_home = resolve_codex_home(args.codex_home)
     skip_codex = args.skip_codex or env_flag('PROMPTIQ_SKIP_CODEX')
     skip_claude = args.skip_claude or env_flag('PROMPTIQ_SKIP_CLAUDE')
@@ -199,6 +254,7 @@ def main(argv: list[str] | None = None) -> int:
         helper_source = install_file(helper_dir / 'promptiq.py', HELPER_LOCAL, 'engine/promptiq.py')
         rubric_source = install_file(helper_dir / 'rubric_v1.json', RUBRIC_LOCAL, 'engine/rubric_v1.json')
         mark_executable(helper_dir / 'promptiq.py')
+        launcher_info = install_launcher(helper_dir, bin_dir=bin_dir)
         codex_status = install_codex_skill(codex_home=codex_home, skip=skip_codex)
         claude_status = install_claude_plugin(skip=skip_claude)
     except PermissionError as exc:
@@ -212,12 +268,19 @@ def main(argv: list[str] | None = None) -> int:
     print('PromptIQ installed successfully.')
     print()
     print('  Trigger:   /score')
+    print('  Command:   promptiq')
     print(f'  Config:    PROMPTIQ_HOME={helper_dir}')
+    print(f'  Launcher:  {launcher_info["bin_launcher"]} ({launcher_info["bin_launcher_status"]})')
+    print(f'  Fallback:  {launcher_info["helper_launcher"]}')
     print(f'  Helper:    {helper_dir / "promptiq.py"} ({helper_source})')
     print(f'  Rubric:    {helper_dir / "rubric_v1.json"} ({rubric_source})')
     print(f'  History:   {helper_dir / "history.json"}')
     print(f'  Imports:   {helper_dir / "imports"}')
-    print(f'  Verify:    python3 "{helper_dir / "promptiq.py"}" doctor')
+    if launcher_info['bin_dir_on_path'] == 'true':
+        print('  Verify:    promptiq doctor')
+    else:
+        print(f'  Verify:    {launcher_info["helper_launcher"]} doctor')
+        print(f'  PATH Hint: Add {Path(launcher_info["bin_launcher"]).parent} to PATH to use `promptiq` directly.')
     print('  Python 3:  found')
     print(f'  Codex:     {codex_status}')
     print(f'  Claude:    {claude_status}')

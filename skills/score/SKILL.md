@@ -29,7 +29,7 @@ Review only user messages. Evaluate the user's steering quality, not the assista
    Run:
 
 ```bash
-python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" finalize \
+"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq" finalize \
   --assessment-file /tmp/promptiq-assessment.json \
   --save
 ```

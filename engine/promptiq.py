@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -36,6 +37,7 @@ DIMENSION_LABELS = {
 DEFAULT_PROMPTIQ_HOME = "~/.promptiq"
 DEFAULT_HISTORY_PATH = f"{DEFAULT_PROMPTIQ_HOME}/history.json"
 DEFAULT_IMPORTS_DIR = f"{DEFAULT_PROMPTIQ_HOME}/imports"
+DEFAULT_BIN_DIR = "~/.local/bin"
 DEFAULT_RUBRIC_FILENAME = "rubric_v1.json"
 ROLE_ALIASES = {
     "ai": "assistant",
@@ -221,6 +223,21 @@ def resolved_history_path(raw: str = DEFAULT_HISTORY_PATH) -> Path:
 
 def history_path(rubric: dict[str, Any]) -> Path:
     return resolved_history_path(rubric["history"]["path"])
+
+
+def resolved_launcher_path() -> Path:
+    return resolve_promptiq_home() / "promptiq"
+
+
+def resolved_bin_dir(raw: str = DEFAULT_BIN_DIR) -> Path:
+    override = os.environ.get("PROMPTIQ_BIN_DIR")
+    if override:
+        return Path(os.path.expanduser(override))
+    return Path(os.path.expanduser(raw))
+
+
+def resolved_bin_launcher_path() -> Path:
+    return resolved_bin_dir() / "promptiq"
 
 
 def resolved_imports_dir(raw: str = DEFAULT_IMPORTS_DIR) -> Path:
@@ -818,7 +835,7 @@ def import_review_artifact_paths(session_id: str, session_fingerprint: str) -> d
 
 def import_review_finalize_command(assessment_path: Path, command_name: str = "score-import") -> str:
     return (
-        f'python3 "${{PROMPTIQ_HOME:-$HOME/.promptiq}}/promptiq.py" {command_name} '
+        f'"${{PROMPTIQ_HOME:-$HOME/.promptiq}}/promptiq" {command_name} '
         f'--assessment-file "{assessment_path}" --save'
     )
 
@@ -1038,6 +1055,11 @@ def doctor(helper_path: Path, rubric_path: Path) -> dict[str, Any]:
     helper_exists = helper.exists()
     if not helper_exists:
         issues.append("helper_missing")
+    launcher_path = resolved_launcher_path()
+    launcher_exists = launcher_path.exists()
+    bin_launcher_path = resolved_bin_launcher_path()
+    bin_launcher_exists = bin_launcher_path.exists()
+    launcher_in_path = shutil.which("promptiq") is not None
 
     rubric_exists = rubric_file.exists()
     if not rubric_exists:
@@ -1075,6 +1097,11 @@ def doctor(helper_path: Path, rubric_path: Path) -> dict[str, Any]:
         "promptiq_home": str(resolve_promptiq_home()),
         "helper_path": str(helper),
         "helper_exists": helper_exists,
+        "launcher_path": str(launcher_path),
+        "launcher_exists": launcher_exists,
+        "bin_launcher_path": str(bin_launcher_path),
+        "bin_launcher_exists": bin_launcher_exists,
+        "launcher_in_path": launcher_in_path,
         "rubric_path": str(rubric_file),
         "rubric_exists": rubric_exists,
         "rubric_version": rubric_version,

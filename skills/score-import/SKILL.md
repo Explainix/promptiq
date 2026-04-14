@@ -14,7 +14,7 @@ Review only user messages from the imported session. Evaluate steering quality, 
    Run:
 
 ```bash
-python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" list-imports
+"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq" list-imports
 ```
 
    If there are no imported sessions, stop and tell the user to run `import-session` first.
@@ -25,13 +25,13 @@ python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" list-imports
    If you are scoring the most recent import, run:
 
 ```bash
-python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" score-import
+"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq" score-import
 ```
 
    If you are scoring a specific imported session, run:
 
 ```bash
-python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" score-import \
+"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq" score-import \
   --session-id [target-session-id]
 ```
 

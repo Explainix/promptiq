@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import os
 import tempfile
@@ -38,6 +39,7 @@ class PromptIQInstallerTests(unittest.TestCase):
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-score-import' / 'references' / 'output-template.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-install' / 'SKILL.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-install' / 'scripts' / 'install_promptiq.py').exists())
+            self.assertTrue((home / '.codex' / 'skills' / 'promptiq-install' / 'scripts' / 'install_promptiq.sh').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-rewrite-last' / 'SKILL.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-rewrite-last' / 'references' / 'output-template.md').exists())
 
@@ -75,12 +77,15 @@ class PromptIQInstallerTests(unittest.TestCase):
 
             self.assertEqual(code, 0)
             self.assertTrue((home / '.promptiq' / 'promptiq.py').exists())
+            self.assertTrue((home / '.promptiq' / 'promptiq').exists())
             self.assertTrue((home / '.promptiq' / 'rubric_v1.json').exists())
+            self.assertTrue((home / '.local' / 'bin' / 'promptiq').exists())
 
     def test_main_honors_promptiq_and_codex_env_overrides(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             promptiq_home = Path(tmpdir) / 'state'
             codex_home = Path(tmpdir) / 'codex-home'
+            bin_dir = Path(tmpdir) / 'bin'
 
             def fake_which(name: str):
                 if name == 'python3':
@@ -91,6 +96,7 @@ class PromptIQInstallerTests(unittest.TestCase):
                 os.environ,
                 {
                     'PROMPTIQ_HOME': str(promptiq_home),
+                    'PROMPTIQ_BIN_DIR': str(bin_dir),
                     'CODEX_HOME': str(codex_home),
                     'PROMPTIQ_SKIP_CLAUDE': '1',
                 },
@@ -101,7 +107,53 @@ class PromptIQInstallerTests(unittest.TestCase):
 
             self.assertEqual(code, 0)
             self.assertTrue((promptiq_home / 'promptiq.py').exists())
+            self.assertTrue((promptiq_home / 'promptiq').exists())
+            self.assertTrue((bin_dir / 'promptiq').exists())
             self.assertTrue((codex_home / 'skills' / 'promptiq' / 'SKILL.md').exists())
+
+    def test_main_reports_promptiq_doctor_when_bin_dir_is_on_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            stdout = io.StringIO()
+
+            def fake_which(name: str):
+                if name == 'python3':
+                    return '/usr/bin/python3'
+                return None
+
+            with patch.object(INSTALLER.Path, 'home', return_value=home):
+                with patch.object(INSTALLER.shutil, 'which', side_effect=fake_which):
+                    with patch.object(INSTALLER, 'install_claude_plugin', return_value='skipped'):
+                        with patch.dict(os.environ, {'PATH': str(home / '.local' / 'bin')}, clear=False):
+                            with patch('sys.stdout', stdout):
+                                code = INSTALLER.main(['--skip-codex', '--skip-claude'])
+
+            output = stdout.getvalue()
+            self.assertEqual(code, 0)
+            self.assertIn('  Verify:    promptiq doctor', output)
+            self.assertNotIn('PATH Hint:', output)
+
+    def test_main_reports_fallback_verify_when_bin_dir_is_not_on_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            stdout = io.StringIO()
+
+            def fake_which(name: str):
+                if name == 'python3':
+                    return '/usr/bin/python3'
+                return None
+
+            with patch.object(INSTALLER.Path, 'home', return_value=home):
+                with patch.object(INSTALLER.shutil, 'which', side_effect=fake_which):
+                    with patch.object(INSTALLER, 'install_claude_plugin', return_value='skipped'):
+                        with patch.dict(os.environ, {'PATH': '/usr/bin'}, clear=False):
+                            with patch('sys.stdout', stdout):
+                                code = INSTALLER.main(['--skip-codex', '--skip-claude'])
+
+            output = stdout.getvalue()
+            self.assertEqual(code, 0)
+            self.assertIn(f'  Verify:    {home / ".promptiq" / "promptiq"} doctor', output)
+            self.assertIn(f'  PATH Hint: Add {home / ".local" / "bin"} to PATH to use `promptiq` directly.', output)
 
 
 if __name__ == '__main__':
