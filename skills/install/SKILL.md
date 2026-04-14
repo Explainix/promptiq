@@ -34,6 +34,7 @@ python3 skills/install/scripts/install_promptiq.py
    - install `~/.promptiq/promptiq.py`
    - install `~/.promptiq/rubric_v1.json`
    - install the full `promptiq` Codex skill bundle, including `references/`
+   - install the `promptiq-score-import` skill bundle for Codex so imported sessions can be reviewed after replay/import
    - install the `promptiq-install` skill bundle for Codex so reinstall/update flows still work
    - install the `promptiq-rewrite-last` skill bundle for Codex so users can improve recent prompts immediately
    - install the Claude plugin if `claude` is present and PromptIQ is not already available
@@ -42,4 +43,4 @@ python3 skills/install/scripts/install_promptiq.py
    Warn if `python3` is missing because deterministic scoring and history persistence will not work.
 
 6. Report the result.
-   Show `Trigger`, `Helper`, `Rubric`, `History`, `Verify`, and which CLI integrations were installed.
+   Show `Trigger`, `Helper`, `Rubric`, `History`, `Imports`, `Verify`, and which CLI integrations were installed.

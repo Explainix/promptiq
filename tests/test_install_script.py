@@ -34,6 +34,8 @@ class PromptIQInstallerTests(unittest.TestCase):
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq' / 'SKILL.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq' / 'references' / 'assessment-schema.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq' / 'references' / 'report-template.md').exists())
+            self.assertTrue((home / '.codex' / 'skills' / 'promptiq-score-import' / 'SKILL.md').exists())
+            self.assertTrue((home / '.codex' / 'skills' / 'promptiq-score-import' / 'references' / 'output-template.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-install' / 'SKILL.md').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-install' / 'scripts' / 'install_promptiq.py').exists())
             self.assertTrue((home / '.codex' / 'skills' / 'promptiq-rewrite-last' / 'SKILL.md').exists())

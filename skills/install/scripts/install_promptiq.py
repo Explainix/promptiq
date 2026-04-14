@@ -36,6 +36,18 @@ SKILL_BUNDLES = {
             'references/report-template.md',
         ),
     ],
+    'promptiq-score-import': [
+        (
+            REPO_ROOT / 'skills' / 'score-import' / 'SKILL.md',
+            'skills/score-import/SKILL.md',
+            'SKILL.md',
+        ),
+        (
+            REPO_ROOT / 'skills' / 'score-import' / 'references' / 'output-template.md',
+            'skills/score-import/references/output-template.md',
+            'references/output-template.md',
+        ),
+    ],
     'promptiq-install': [
         (
             REPO_ROOT / 'skills' / 'install' / 'SKILL.md',
@@ -204,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f'  Helper:    {helper_dir / "promptiq.py"} ({helper_source})')
     print(f'  Rubric:    {helper_dir / "rubric_v1.json"} ({rubric_source})')
     print(f'  History:   {helper_dir / "history.json"}')
+    print(f'  Imports:   {helper_dir / "imports"}')
     print(f'  Verify:    python3 "{helper_dir / "promptiq.py"}" doctor')
     print('  Python 3:  found')
     print(f'  Codex:     {codex_status}')

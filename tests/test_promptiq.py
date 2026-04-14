@@ -1,4 +1,5 @@
 import copy
+import io
 import json
 import tempfile
 import unittest
@@ -74,6 +75,19 @@ class PromptIQEngineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ENGINE.load_assessment_payload('{"date":"2026-04-13"}', '/tmp/input.json')
 
+    def test_load_session_payload_supports_file_input(self):
+        payload = {'transcript': [{'role': 'user', 'content': 'hello'}]}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / 'session.json'
+            path.write_text(json.dumps(payload))
+            loaded = ENGINE.load_session_payload(None, str(path))
+
+        self.assertEqual(loaded['transcript'][0]['content'], 'hello')
+
+    def test_load_session_payload_rejects_ambiguous_input(self):
+        with self.assertRaises(ValueError):
+            ENGINE.load_session_payload('{"messages":[]}', '/tmp/session.json')
+
     def test_load_history_recovers_from_corrupted_json(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / 'history.json'
@@ -96,6 +110,422 @@ class PromptIQEngineTests(unittest.TestCase):
             for item in payload['transcript']:
                 self.assertIn('role', item, path.name)
                 self.assertIn('content', item, path.name)
+
+    def test_normalize_transcript_bundle_accepts_messages_and_text_parts(self):
+        bundle = ENGINE.normalize_transcript_bundle(
+            {
+                'session_id': 'sess-001',
+                'tool': 'claude-code',
+                'messages': [
+                    {
+                        'role': 'human',
+                        'content': [
+                            {'type': 'text', 'text': 'First line'},
+                            {'type': 'image', 'url': 'https://example.com/demo.png'},
+                            'Second line',
+                        ],
+                    },
+                    {
+                        'role': 'assistant',
+                        'parts': [{'text': 'Done'}],
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(bundle['session_id'], 'sess-001')
+        self.assertEqual(bundle['tool'], 'claude-code')
+        self.assertEqual(bundle['messages'][0]['role'], 'user')
+        self.assertEqual(bundle['messages'][0]['content'], 'First line\nSecond line')
+        self.assertEqual(bundle['messages'][1]['content'], 'Done')
+        self.assertEqual(bundle['message_count'], 2)
+        self.assertEqual(bundle['user_message_count'], 1)
+
+    def test_import_session_persists_normalized_bundle(self):
+        payload = {
+            'tool': 'codex',
+            'description': 'Imported debug session',
+            'transcript': [
+                {'role': 'user', 'content': 'Check the build output first.'},
+                {'role': 'assistant', 'content': 'I will inspect the logs.'},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / 'import-source.json'
+            source.write_text(json.dumps(payload), encoding='utf-8')
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                result = ENGINE.import_session(payload, source_path=source)
+                stored = json.loads(Path(result['import_path']).read_text(encoding='utf-8'))
+
+        self.assertEqual(result['import_write'], 'saved_new')
+        self.assertEqual(result['tool'], 'codex')
+        self.assertEqual(result['message_count'], 2)
+        self.assertEqual(result['user_message_count'], 1)
+        self.assertTrue(result['session_id'].startswith('import-'))
+        self.assertEqual(stored['source_path'], str(source.resolve()))
+        self.assertEqual(stored['session_summary'], 'Imported debug session')
+
+    def test_list_imports_and_doctor_report_import_count(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            helper = root / 'promptiq.py'
+            rubric_path = root / 'rubric_v1.json'
+
+            helper.write_text('#!/usr/bin/env python3\n', encoding='utf-8')
+            rubric_path.write_text(json.dumps(RUBRIC), encoding='utf-8')
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(
+                    [{'role': 'user', 'content': 'First imported session'}],
+                )
+                ENGINE.import_session(
+                    [{'role': 'user', 'content': 'Second imported session'}],
+                )
+                imports = ENGINE.list_imports()
+                doctor = ENGINE.doctor(helper, rubric_path)
+
+        self.assertEqual(imports['import_session_count'], 2)
+        self.assertEqual(len(imports['imports']), 2)
+        self.assertIsNotNone(imports['latest_session_id'])
+        self.assertIsNotNone(imports['latest_import_path'])
+        self.assertEqual(doctor['import_session_count'], 2)
+        self.assertEqual(doctor['imports_path'], str(root / 'imports'))
+        self.assertIsNone(doctor['imports_warning'])
+
+    def test_list_imports_flags_unreadable_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            imports_dir = Path(tmpdir) / 'imports'
+            imports_dir.mkdir(parents=True)
+            (imports_dir / 'broken.json').write_text('{broken', encoding='utf-8')
+
+            result = ENGINE.list_imports(imports_dir)
+
+        self.assertEqual(result['import_session_count'], 0)
+        self.assertEqual(result['imports_warning'], 'imports_unreadable')
+        self.assertEqual(result['unreadable_imports'], ['broken.json'])
+
+    def test_main_supports_import_session_command(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            stdout = io.StringIO()
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                with patch('sys.stdout', stdout):
+                    ENGINE.main(
+                        [
+                            'import-session',
+                            '--session-json',
+                            '[{"role":"user","content":"hello from cli"}]',
+                        ]
+                    )
+
+                self.assertTrue((root / 'imports').exists())
+
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result['import_write'], 'saved_new')
+        self.assertEqual(result['message_count'], 1)
+
+    def test_replay_session_defaults_to_user_only_view(self):
+        payload = {
+            'session_id': 'sess-replay',
+            'tool': 'codex',
+            'description': 'Replayable debug session',
+            'transcript': [
+                {'role': 'user', 'content': 'Check the auth middleware first.'},
+                {'role': 'assistant', 'content': 'I will inspect auth.ts.'},
+                {'role': 'user', 'content': 'Compare it to yesterday before changing code.'},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(payload)
+                replay = ENGINE.replay_session(session_id='sess-replay')
+
+        self.assertEqual(replay['replay_view'], 'user_only')
+        self.assertEqual(len(replay['messages']), 2)
+        self.assertTrue(all(message['role'] == 'user' for message in replay['messages']))
+        self.assertIn('PromptIQ Session Replay', replay['markdown'])
+        self.assertNotIn('inspect auth.ts', replay['markdown'])
+        self.assertIn('user turns', replay['markdown'])
+
+    def test_replay_session_uses_latest_import_when_identifier_is_omitted(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session([{'role': 'user', 'content': 'Older imported session'}])
+                latest = ENGINE.import_session([{'role': 'user', 'content': 'Most recent imported session'}])
+                replay = ENGINE.replay_session()
+
+        self.assertEqual(replay['session_id'], latest['session_id'])
+        self.assertIn('Most recent imported session', replay['markdown'])
+        self.assertNotIn('Older imported session', replay['markdown'])
+
+    def test_replay_session_can_render_full_markdown_from_cli(self):
+        payload = {
+            'session_id': 'sess-full',
+            'tool': 'claude-code',
+            'messages': [
+                {'role': 'user', 'content': 'Find the failing migration.'},
+                {'role': 'assistant', 'content': 'I found a mismatch in the schema.'},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            stdout = io.StringIO()
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(payload)
+                with patch('sys.stdout', stdout):
+                    ENGINE.main(
+                        [
+                            'replay-session',
+                            '--session-id',
+                            'sess-full',
+                            '--include-assistant',
+                            '--format',
+                            'markdown',
+                        ]
+                    )
+
+        rendered = stdout.getvalue()
+        self.assertIn('## PromptIQ Session Replay', rendered)
+        self.assertIn('[1] User', rendered)
+        self.assertIn('[2] Assistant', rendered)
+        self.assertIn('I found a mismatch in the schema.', rendered)
+
+    def test_replay_session_rejects_missing_identifier(self):
+        with self.assertRaises(ValueError):
+            ENGINE.replay_session()
+
+    def test_main_reports_replay_errors_cleanly(self):
+        stderr = io.StringIO()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': tmpdir}, clear=False):
+                with patch('sys.stderr', stderr):
+                    with self.assertRaises(SystemExit) as exit_info:
+                        ENGINE.main(['replay-session'])
+
+        self.assertEqual(exit_info.exception.code, 1)
+        self.assertIn('PromptIQ command failed', stderr.getvalue())
+        self.assertIn('no imported sessions found', stderr.getvalue())
+
+    def test_draft_assessment_prefills_import_metadata(self):
+        payload = {
+            'session_id': 'sess-draft',
+            'tool': 'codex',
+            'messages': [
+                {'role': 'user', 'content': 'Audit the failing auth flow.'},
+                {'role': 'assistant', 'content': 'I am checking middleware.'},
+                {'role': 'user', 'content': 'Keep the fix minimal and verifiable.'},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(payload)
+                draft = ENGINE.draft_assessment(session_id='sess-draft')
+
+        template = draft['assessment_template']
+        self.assertEqual(template['session_id'], 'sess-draft')
+        self.assertEqual(template['tool'], 'codex')
+        self.assertEqual(template['meaningful_user_messages'], 2)
+        self.assertEqual(template['plugin_version'], '0.4.0')
+        self.assertEqual(template['complexity'], '[set: low | medium | high]')
+        self.assertIn('PromptIQ Session Replay', draft['replay_markdown'])
+        self.assertEqual(draft['message_stats']['user_message_count'], 2)
+
+    def test_draft_assessment_defaults_to_latest_import(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session([{'role': 'user', 'content': 'First imported session'}])
+                latest = ENGINE.import_session(
+                    {
+                        'session_id': 'sess-latest-draft',
+                        'transcript': [{'role': 'user', 'content': 'Use me for the draft'}],
+                    }
+                )
+                draft = ENGINE.draft_assessment()
+
+        self.assertEqual(draft['source']['session_id'], latest['session_id'])
+        self.assertEqual(draft['assessment_template']['session_id'], 'sess-latest-draft')
+
+    def test_main_supports_draft_assessment_command(self):
+        payload = {
+            'session_id': 'sess-cli-draft',
+            'transcript': [{'role': 'user', 'content': 'Narrow the investigation to runtime logs.'}],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            stdout = io.StringIO()
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(payload)
+                with patch('sys.stdout', stdout):
+                    ENGINE.main(['draft-assessment', '--session-id', 'sess-cli-draft'])
+
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result['assessment_template']['session_id'], 'sess-cli-draft')
+        self.assertEqual(result['assessment_template']['meaningful_user_messages'], 1)
+
+    def test_main_supports_draft_assessment_without_session_id(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            stdout = io.StringIO()
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(
+                    {
+                        'session_id': 'sess-most-recent',
+                        'transcript': [{'role': 'user', 'content': 'Score the latest import by default.'}],
+                    }
+                )
+                with patch('sys.stdout', stdout):
+                    ENGINE.main(['draft-assessment'])
+
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result['assessment_template']['session_id'], 'sess-most-recent')
+
+    def test_prepare_import_review_writes_seed_files(self):
+        payload = {
+            'session_id': 'sess-prep',
+            'tool': 'codex',
+            'transcript': [
+                {'role': 'user', 'content': 'Audit the deploy rollback path.'},
+                {'role': 'user', 'content': 'Keep the patch minimal and testable.'},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(payload)
+                prepared = ENGINE.prepare_import_review(session_id='sess-prep')
+                assessment_file = Path(prepared['assessment_file'])
+                replay_file = Path(prepared['replay_file'])
+                stored_assessment = json.loads(assessment_file.read_text(encoding='utf-8'))
+                stored_replay = replay_file.read_text(encoding='utf-8')
+
+        self.assertEqual(stored_assessment['session_id'], 'sess-prep')
+        self.assertEqual(stored_assessment['meaningful_user_messages'], 2)
+        self.assertIn('PromptIQ Session Replay', stored_replay)
+        self.assertIn('score-import', prepared['next_command'])
+        self.assertIn('--assessment-file', prepared['next_command'])
+        self.assertIn('Edit the assessment_file in place', '\n'.join(prepared['notes']))
+
+    def test_main_supports_prepare_import_review_without_session_id(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            stdout = io.StringIO()
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(
+                    {
+                        'session_id': 'sess-prep-cli',
+                        'transcript': [{'role': 'user', 'content': 'Prepare the latest imported review.'}],
+                    }
+                )
+                with patch('sys.stdout', stdout):
+                    ENGINE.main(['prepare-import-review'])
+
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result['source']['session_id'], 'sess-prep-cli')
+        self.assertTrue(Path(result['assessment_file']).exists())
+        self.assertTrue(Path(result['replay_file']).exists())
+
+    def test_score_import_prepare_mode_returns_seed_workspace(self):
+        payload = {
+            'session_id': 'sess-score-import',
+            'transcript': [{'role': 'user', 'content': 'Use score-import as the single command entrypoint.'}],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(payload)
+                result = ENGINE.score_import({}, save=False)
+
+        self.assertEqual(result['mode'], 'prepare')
+        self.assertEqual(result['source']['session_id'], 'sess-score-import')
+        self.assertIn('score-import', result['next_command'])
+        self.assertTrue(Path(result['assessment_file']).exists())
+
+    def test_main_supports_score_import_prepare_without_session_id(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            stdout = io.StringIO()
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(
+                    {
+                        'session_id': 'sess-score-import-cli',
+                        'transcript': [{'role': 'user', 'content': 'Prepare score-import from the latest session.'}],
+                    }
+                )
+                with patch('sys.stdout', stdout):
+                    ENGINE.main(['score-import'])
+
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result['mode'], 'prepare')
+        self.assertEqual(result['source']['session_id'], 'sess-score-import-cli')
+        self.assertTrue(Path(result['assessment_file']).exists())
+
+    def test_main_supports_score_import_finalize_with_assessment_file(self):
+        payload = {
+            'session_id': 'sess-score-finalize',
+            'tool': 'codex',
+            'transcript': [
+                {'role': 'user', 'content': 'Audit the middleware regression.'},
+                {'role': 'user', 'content': 'Keep the fix minimal and verify it.'},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            stdout = io.StringIO()
+
+            with patch.dict(ENGINE.os.environ, {'PROMPTIQ_HOME': str(root)}, clear=False):
+                ENGINE.import_session(payload)
+                prepared = ENGINE.prepare_import_review(session_id='sess-score-finalize')
+                assessment_path = Path(prepared['assessment_file'])
+                completed_assessment = make_assessment(
+                    session_id='sess-score-finalize',
+                    session_fingerprint=prepared['source']['session_fingerprint'],
+                    tool='codex',
+                    session_summary='Imported middleware regression review',
+                    meaningful_user_messages=2,
+                    complexity='medium',
+                    applicability={
+                        'examples': False,
+                        'reasoning': True,
+                        'tool_awareness': True,
+                        'verification': True,
+                    },
+                    evidence_counts={
+                        'evidence_quotes': 2,
+                        'corrections_or_refinements': 1,
+                        'output_constraints': 1,
+                        'tool_signals': 1,
+                        'verification_signals': 1,
+                    },
+                )
+                assessment_path.write_text(json.dumps(completed_assessment), encoding='utf-8')
+                with patch('sys.stdout', stdout):
+                    ENGINE.main(['score-import', '--assessment-file', str(assessment_path), '--save'])
+
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result['mode'], 'finalized')
+        self.assertEqual(result['history_write'], 'saved_new')
+        self.assertEqual(result['session_record']['session_id'], 'sess-score-finalize')
 
     def test_short_session_is_capped(self):
         assessment = make_assessment(

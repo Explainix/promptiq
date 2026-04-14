@@ -5,8 +5,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_REPORT = ROOT / 'examples' / 'sample-report.md'
+IMPORTED_SAMPLE_REPORT = ROOT / 'examples' / 'imported-report-sample.md'
 SAMPLE_REWRITE = ROOT / 'examples' / 'rewrite-last-sample.md'
 REPORT_TEMPLATE = ROOT / 'skills' / 'score' / 'references' / 'report-template.md'
+IMPORTED_REPORT_TEMPLATE = ROOT / 'skills' / 'score-import' / 'references' / 'output-template.md'
 REWRITE_TEMPLATE = ROOT / 'skills' / 'rewrite-last' / 'references' / 'output-template.md'
 
 
@@ -80,6 +82,57 @@ class PromptIQOutputContractTests(unittest.TestCase):
         self.assertIn('verification implicit', text)
         self.assertIn('verification rule', text)
         self.assertIn('concrete check', text)
+
+    def test_imported_sample_report_matches_contract_sections(self):
+        text = read(IMPORTED_SAMPLE_REPORT)
+        assert_in_order(
+            self,
+            text,
+            [
+                '## PromptIQ Review',
+                '**Why It Is Not Higher**',
+                '**Dimension Breakdown**',
+                '**Strongest Evidence**',
+                '**Course Corrections**',
+                '**Next Session Drill**',
+                '**Recent Trend**',
+                '**Focus Area**',
+            ],
+        )
+
+    def test_imported_report_template_preserves_preface_and_required_sections(self):
+        text = read(IMPORTED_REPORT_TEMPLATE)
+        assert_in_order(
+            self,
+            text,
+            [
+                'Reviewed imported session',
+                '## PromptIQ Review',
+                '**Why It Is Not Higher**',
+                '**Dimension Breakdown**',
+                '**Strongest Evidence**',
+                '**Course Corrections**',
+                '**Next Session Drill**',
+                '**Recent Trend**',
+                '**Focus Area**',
+            ],
+        )
+
+    def test_imported_sample_report_includes_import_context(self):
+        text = read(IMPORTED_SAMPLE_REPORT)
+        self.assertIn('Reviewed imported session', text)
+        self.assertIn('structured_debug_session.json', text)
+
+    def test_imported_sample_report_keeps_verification_language_visible(self):
+        text = read(IMPORTED_SAMPLE_REPORT)
+        self.assertIn('verification', text.lower())
+        self.assertIn('falsifiable', text)
+        self.assertIn('concrete check', text)
+
+    def test_imported_report_template_mentions_single_line_preface_rule(self):
+        text = read(IMPORTED_REPORT_TEMPLATE)
+        self.assertIn('preface to one line', text)
+        self.assertIn('Preserve the same tone', text)
 
     def test_rewrite_template_preserves_required_section_order(self):
         text = read(REWRITE_TEMPLATE)

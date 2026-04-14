@@ -25,6 +25,7 @@ Useful contributions usually strengthen one of these areas:
 
 - stricter and more stable scoring behavior
 - clearer installation and troubleshooting
+- sturdier transcript import compatibility for replay and backfill workflows
 - better explanation of what PromptIQ is and is not
 - fixture-driven calibration protection
 - contributor experience for testing and validating changes
@@ -40,6 +41,14 @@ If you change scoring, confidence, history, or report logic:
 - avoid making the product more flattering unless there is strong evidence it also becomes more accurate
 
 PromptIQ should not drift into a compliment engine.
+
+## Transcript Import Changes
+
+If you change transcript import or normalization behavior:
+
+- add tests for each accepted payload shape you support
+- add at least one malformed-payload test when broadening compatibility
+- preserve local-only storage unless there is an explicit product decision to change it
 
 ## Fixture Guidance
 
@@ -63,6 +72,7 @@ When changing README or docs:
 PromptIQ treats the example markdown files as golden output contracts:
 
 - `examples/sample-report.md`
+- `examples/imported-report-sample.md`
 - `examples/rewrite-last-sample.md`
 
 If you change output structure, headings, or summary tables, update the matching templates and keep `tests/test_output_contracts.py` passing.

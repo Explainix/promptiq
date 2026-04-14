@@ -30,6 +30,8 @@ Run `/score` at the end of a real session to get:
 
 Run `/rewrite-last` when you want PromptIQ to rewrite your last 1-3 meaningful prompts into stronger, paste-ready versions for the same task.
 
+Run `/score-import` when you want PromptIQ to review a previously imported session instead of the live thread.
+
 ## Who It Is For
 
 PromptIQ is for users who:
@@ -73,7 +75,9 @@ The `doctor` command tells you:
 - where PromptIQ is installed
 - whether the helper and rubric are present
 - where history will be stored
+- where imported session bundles will be stored
 - how many local sessions are currently tracked
+- how many imported sessions are currently available for replay workflows
 - whether your local history is corrupted and needs to be recreated
 
 When available, PromptIQ also stores session identity and model metadata so repeat scoring does not pollute trend lines.
@@ -87,6 +91,58 @@ When available, PromptIQ also stores session identity and model metadata so repe
 5. Run `/rewrite-last` when you want PromptIQ to tighten your recent prompts immediately.
 
 If `promptiq.py` or `rubric_v1.json` is missing, run `/install` first.
+
+## Import Past Sessions
+
+PromptIQ can also normalize and store old session transcripts locally so we can build replay and backfill workflows on top of stable data instead of brittle copy-paste.
+
+Import a session file:
+
+```bash
+python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" import-session \
+  --session-file ./fixtures/structured_debug_session.json
+```
+
+List imported sessions:
+
+```bash
+python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" list-imports
+```
+
+Replay one imported session as a clean review artifact:
+
+```bash
+python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" replay-session --format markdown
+```
+
+Include assistant turns when you need the full exchange instead of PromptIQ's default user-only view:
+
+```bash
+python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" replay-session \
+  --include-assistant \
+  --format markdown
+```
+
+Add `--session-id [id]` when you want a specific imported session instead of the most recent one.
+
+Supported JSON input shapes:
+
+- fixture-style objects with `transcript`
+- session objects with `messages`
+- raw arrays of `{role, content}` messages
+
+The default replay view shows only user turns because PromptIQ scores steering quality, not assistant quality.
+
+PromptIQ stores imported bundles locally at `~/.promptiq/imports/` unless `PROMPTIQ_HOME` or `PROMPTIQ_IMPORTS_PATH` says otherwise.
+
+If you want to turn an imported session into a real PromptIQ review workflow, generate an assessment seed first:
+
+```bash
+python3 "${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq.py" score-import
+```
+
+That command writes a ready-to-edit assessment JSON and a replay markdown file for the most recent imported session, then returns the exact finalize command to run after you fill in the judgment fields.
+Add `--session-id [id]` when you want to score a specific imported session instead of the latest one.
 
 ## What Strong Sessions Usually Look Like
 
@@ -104,7 +160,10 @@ This matters because long sessions with vague prompts often feel productive whil
 ## Example Output
 
 See [examples/sample-report.md](examples/sample-report.md) for a representative report.
+See [examples/imported-report-sample.md](examples/imported-report-sample.md) for a representative `/score-import` report.
 See [examples/rewrite-last-sample.md](examples/rewrite-last-sample.md) for a representative `/rewrite-last` result.
+
+Together, these examples act as the repo's golden output contracts for live review, imported review, and prompt rewrite flows.
 
 ## How Scoring Works
 
@@ -130,7 +189,7 @@ The helper also supports file-based assessment input so large session payloads d
 
 ## Privacy
 
-PromptIQ stores history locally at `~/.promptiq/history.json` unless `PROMPTIQ_HOME` or `PROMPTIQ_HISTORY_PATH` says otherwise. PromptIQ does not upload that history by itself.
+PromptIQ stores history locally at `~/.promptiq/history.json` and imported transcript bundles at `~/.promptiq/imports/` unless `PROMPTIQ_HOME`, `PROMPTIQ_HISTORY_PATH`, or `PROMPTIQ_IMPORTS_PATH` says otherwise. PromptIQ does not upload that data by itself.
 
 ## Local Development
 
