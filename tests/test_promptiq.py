@@ -1080,6 +1080,19 @@ class PromptIQEngineTests(unittest.TestCase):
         entries = ENGINE.recent_trend_entries(records)
         self.assertIsNone(entries[0].get("dimension_deltas"))
 
+    def test_detect_milestone_at_5(self):
+        self.assertEqual(ENGINE.detect_milestone(5), {"session_count": 5, "message": "5 sessions in."})
+
+    def test_detect_milestone_at_10(self):
+        result = ENGINE.detect_milestone(10)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["session_count"], 10)
+
+    def test_detect_milestone_none_at_non_milestone(self):
+        self.assertIsNone(ENGINE.detect_milestone(3))
+        self.assertIsNone(ENGINE.detect_milestone(7))
+        self.assertIsNone(ENGINE.detect_milestone(11))
+
 
 if __name__ == '__main__':
     unittest.main()

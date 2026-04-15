@@ -1047,6 +1047,18 @@ def focus_area(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+MILESTONE_COUNTS = {5, 10, 20, 50, 100}
+
+
+def detect_milestone(session_count: int) -> dict[str, Any] | None:
+    if session_count not in MILESTONE_COUNTS:
+        return None
+    return {
+        "session_count": session_count,
+        "message": f"{session_count} sessions in.",
+    }
+
+
 def compute_trend(history: dict[str, Any], rubric_version: str, total: float, identity: dict[str, Any] | None = None) -> dict[str, Any] | None:
     sessions = compatible_sessions(history, rubric_version)
     if identity is not None:
@@ -1209,6 +1221,7 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
     session_count = len(analytics_records)
     recent_trend = recent_trend_entries(analytics_records)
     weakest_focus_area = focus_area(analytics_records)
+    milestone = detect_milestone(session_count)
     history_write = "not_saved"
 
     if save:
@@ -1232,6 +1245,7 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
         "trend": trend,
         "session_record": session_record,
         "evidence": assessment.get("evidence", {}),
+        "milestone": milestone,
     }
 
 
