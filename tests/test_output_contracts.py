@@ -33,11 +33,14 @@ class PromptIQOutputContractTests(unittest.TestCase):
             [
                 '## PromptIQ Review',
                 '**Why It Is Not Higher**',
-                '**Dimension Breakdown**',
+                '**Focus Dimension**',
+                '**Other Dimensions**',
                 '**Strongest Evidence**',
                 '**Course Corrections**',
                 '**Next Session Drill**',
+                '**Next Step**',
                 '**Recent Trend**',
+                '**Milestone**',
                 '**Focus Area**',
             ],
         )
