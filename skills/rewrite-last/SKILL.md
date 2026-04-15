@@ -11,6 +11,27 @@ Rewrite only the user's recent prompts. Do not review or rewrite assistant messa
    Ignore filler like "continue", "ok", or "do it".
    If only one prompt is meaningful, rewrite one.
 
+   **If triggered from a `/score` report** (the user said yes to the rewrite offer):
+   The target prompt is the one that drove the weakest dimension score.
+   Use the evidence sentence from the assessment to frame the rewrite:
+   - Show the original prompt
+   - Show the evidence sentence explaining why it was weak
+   - Show the rewritten version
+   - Show what specifically changed and why
+
+   Format:
+   **Original**
+   > [original prompt text]
+
+   **Why it was weak**
+   [evidence sentence]
+
+   **Rewritten**
+   > [improved prompt]
+
+   **What changed**
+   [2-3 bullet points: specific additions or changes made]
+
 2. Preserve intent.
    Do not change the user's goal.
    Tighten scope, context, constraints, output shape, and verification plan.
