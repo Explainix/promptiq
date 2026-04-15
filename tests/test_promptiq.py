@@ -967,6 +967,132 @@ class PromptIQEngineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
 
+    def test_validate_assessment_accepts_evidence_field(self):
+        """evidence field is optional but when present must be a dict of dimension -> string."""
+        base = make_assessment()
+        base["evidence"] = {
+            "clarity": "Third prompt did not specify expected output format",
+            "context": "Provided file path and error message at session start",
+        }
+        # should not raise
+        ENGINE.validate_assessment(base)
+
+    def test_validate_assessment_rejects_non_string_evidence_value(self):
+        base = make_assessment()
+        base["evidence"] = {"clarity": 42}
+        with self.assertRaises(ValueError, msg="evidence"):
+            ENGINE.validate_assessment(base)
+
+    def test_validate_assessment_rejects_unknown_dimension_in_evidence(self):
+        base = make_assessment()
+        base["evidence"] = {"nonexistent_dim": "some text"}
+        with self.assertRaises(ValueError, msg="evidence"):
+            ENGINE.validate_assessment(base)
+
+    def test_finalize_includes_evidence_in_output(self):
+        assessment = make_assessment()
+        assessment["evidence"] = {
+            "clarity": "Third prompt did not specify expected output format",
+        }
+        result = ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
+        self.assertIn("evidence", result)
+        self.assertEqual(result["evidence"]["clarity"], "Third prompt did not specify expected output format")
+
+    def test_finalize_evidence_absent_when_not_provided(self):
+        assessment = make_assessment()
+        result = ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
+        self.assertEqual(result.get("evidence"), {})
+
+    def test_apply_caps_no_evidence_cap(self):
+        """Dimension score > 5 without evidence sentence should cap total at 5."""
+        assessment = make_assessment()
+        assessment["dimensions"] = {
+            "clarity": 8,
+            "context": 5,
+            "iteration": 5,
+            "decomposition": 5,
+            "output_spec": 5,
+            "examples": None,
+            "reasoning": None,
+            "tool_awareness": None,
+        }
+        assessment["evidence"] = {}
+        raw_total = 5.6
+        confidence = "medium"
+        rubric = copy.deepcopy(RUBRIC)
+        total, cap_reasons = ENGINE.apply_caps(raw_total, assessment, rubric, confidence)
+        self.assertIn("no_evidence_cap", cap_reasons)
+
+    def test_apply_caps_no_evidence_cap_not_triggered_when_evidence_present(self):
+        assessment = make_assessment()
+        assessment["dimensions"] = {
+            "clarity": 8,
+            "context": 5,
+            "iteration": 5,
+            "decomposition": 5,
+            "output_spec": 5,
+            "examples": None,
+            "reasoning": None,
+            "tool_awareness": None,
+        }
+        assessment["evidence"] = {"clarity": "User specified exact output format in prompt 2"}
+        raw_total = 5.6
+        confidence = "medium"
+        rubric = copy.deepcopy(RUBRIC)
+        total, cap_reasons = ENGINE.apply_caps(raw_total, assessment, rubric, confidence)
+        self.assertNotIn("no_evidence_cap", cap_reasons)
+
+
+    def test_recent_trend_entries_includes_dimension_deltas(self):
+        records = [
+            {
+                "date": "2026-04-10",
+                "total": 6.0,
+                "dimensions": {"clarity": 5, "context": 6, "iteration": 5,
+                               "decomposition": 5, "output_spec": 5,
+                               "examples": None, "reasoning": None, "tool_awareness": None},
+            },
+            {
+                "date": "2026-04-14",
+                "total": 6.5,
+                "dimensions": {"clarity": 7, "context": 6, "iteration": 5,
+                               "decomposition": 5, "output_spec": 5,
+                               "examples": None, "reasoning": None, "tool_awareness": None},
+            },
+        ]
+        entries = ENGINE.recent_trend_entries(records)
+        self.assertEqual(len(entries), 2)
+        second = entries[1]
+        self.assertIn("dimension_deltas", second)
+        self.assertEqual(second["dimension_deltas"]["clarity"], 2.0)
+        self.assertEqual(second["dimension_deltas"]["context"], 0.0)
+
+    def test_recent_trend_entries_first_entry_has_no_deltas(self):
+        records = [
+            {
+                "date": "2026-04-10",
+                "total": 6.0,
+                "dimensions": {"clarity": 5, "context": 6, "iteration": 5,
+                               "decomposition": 5, "output_spec": 5,
+                               "examples": None, "reasoning": None, "tool_awareness": None},
+            },
+        ]
+        entries = ENGINE.recent_trend_entries(records)
+        self.assertIsNone(entries[0].get("dimension_deltas"))
+
+    def test_detect_milestone_at_5(self):
+        self.assertEqual(ENGINE.detect_milestone(5), {"session_count": 5, "message": "5 sessions in."})
+
+    def test_detect_milestone_at_10(self):
+        result = ENGINE.detect_milestone(10)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["session_count"], 10)
+
+    def test_detect_milestone_none_at_non_milestone(self):
+        self.assertIsNone(ENGINE.detect_milestone(3))
+        self.assertIsNone(ENGINE.detect_milestone(7))
+        self.assertIsNone(ENGINE.detect_milestone(11))
+
 
 if __name__ == '__main__':
     unittest.main()

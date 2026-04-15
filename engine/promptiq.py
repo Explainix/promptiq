@@ -122,6 +122,16 @@ def validate_assessment(assessment: dict[str, Any]) -> None:
         if numeric < 1 or numeric > 10:
             raise ValueError(f"{key} must be between 1 and 10")
 
+    evidence = assessment.get("evidence")
+    if evidence is not None:
+        if not isinstance(evidence, dict):
+            raise ValueError("evidence must be a dict")
+        for dim_key, sentence in evidence.items():
+            if dim_key not in DIMENSION_LABELS:
+                raise ValueError(f"evidence contains unknown dimension: {dim_key!r}")
+            if not isinstance(sentence, str):
+                raise ValueError(f"evidence[{dim_key!r}] must be a string")
+
 
 def derive_confidence(assessment: dict[str, Any], rubric: dict[str, Any]) -> str:
     rules = rubric["confidence_rules"]
@@ -202,6 +212,20 @@ def apply_caps(raw_total: float, assessment: dict[str, Any], rubric: dict[str, A
         ):
             capped = min(capped, 8.4)
             reasons.append("above_8_5_gate_failed")
+
+    evidence_rules = rubric.get("evidence_rules", {})
+    no_evidence_cap = evidence_rules.get("no_evidence_cap")
+    high_score_threshold = evidence_rules.get("high_score_requires_evidence_above", 5)
+    if no_evidence_cap is not None and "evidence" in assessment:
+        evidence_field = assessment.get("evidence", {})
+        dimensions = assessment.get("dimensions", {})
+        has_high_score_without_evidence = any(
+            v is not None and float(v) > high_score_threshold and key not in evidence_field
+            for key, v in dimensions.items()
+        )
+        if has_high_score_without_evidence and capped > no_evidence_cap:
+            capped = min(capped, no_evidence_cap)
+            reasons.append("no_evidence_cap")
 
     return round1(capped), reasons
 
@@ -978,15 +1002,27 @@ def next_band_requirements(target_total: float, confidence: str, assessment: dic
 
 def recent_trend_entries(records: list[dict[str, Any]], limit: int = 5) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    for record in records[-limit:]:
+    window = records[-limit:]
+    for i, record in enumerate(window):
         weakest = weakest_dimension_for_record(record)
-        entries.append(
-            {
-                "date": record.get("date"),
-                "total": round1(float(record["total"])),
-                "weakest_dimension": weakest,
-            }
-        )
+        entry: dict[str, Any] = {
+            "date": record.get("date"),
+            "total": round1(float(record["total"])),
+            "weakest_dimension": weakest,
+            "dimension_deltas": None,
+        }
+        if i > 0:
+            prev = window[i - 1]
+            prev_dims = prev.get("dimensions", {})
+            curr_dims = record.get("dimensions", {})
+            deltas: dict[str, float] = {}
+            for key in DIMENSION_LABELS:
+                prev_val = prev_dims.get(key)
+                curr_val = curr_dims.get(key)
+                if prev_val is not None and curr_val is not None:
+                    deltas[key] = round1(float(curr_val) - float(prev_val))
+            entry["dimension_deltas"] = deltas if deltas else None
+        entries.append(entry)
     return entries
 
 
@@ -1008,6 +1044,18 @@ def focus_area(records: list[dict[str, Any]]) -> dict[str, Any] | None:
         "key": lowest_key,
         "label": DIMENSION_LABELS[lowest_key],
         "average_score": average_score,
+    }
+
+
+MILESTONE_COUNTS = {5, 10, 20, 50, 100}
+
+
+def detect_milestone(session_count: int) -> dict[str, Any] | None:
+    if session_count not in MILESTONE_COUNTS:
+        return None
+    return {
+        "session_count": session_count,
+        "message": f"{session_count} sessions in.",
     }
 
 
@@ -1156,6 +1204,7 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
         "tool": assessment.get("tool"),
         "meaningful_user_messages": assessment.get("meaningful_user_messages"),
         "evidence_counts": assessment.get("evidence_counts", {}),
+        "evidence": assessment.get("evidence", {}),
         "cap_reasons": cap_reasons,
         "score_band": band,
         "weakest_dimension": weakest,
@@ -1172,6 +1221,7 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
     session_count = len(analytics_records)
     recent_trend = recent_trend_entries(analytics_records)
     weakest_focus_area = focus_area(analytics_records)
+    milestone = detect_milestone(session_count)
     history_write = "not_saved"
 
     if save:
@@ -1194,6 +1244,8 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
         "history_write": history_write,
         "trend": trend,
         "session_record": session_record,
+        "evidence": assessment.get("evidence", {}),
+        "milestone": milestone,
     }
 
 

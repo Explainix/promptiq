@@ -94,6 +94,10 @@
       "min_verification_signals_if_applicable": 1
     }
   },
+  "evidence_rules": {
+    "high_score_requires_evidence_above": 5,
+    "no_evidence_cap": 5.0
+  },
   "history": {
     "path": "~/.promptiq/history.json",
     "compare_only_same_rubric_version": true
