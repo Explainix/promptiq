@@ -1166,6 +1166,7 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
         "tool": assessment.get("tool"),
         "meaningful_user_messages": assessment.get("meaningful_user_messages"),
         "evidence_counts": assessment.get("evidence_counts", {}),
+        "evidence": assessment.get("evidence", {}),
         "cap_reasons": cap_reasons,
         "score_band": band,
         "weakest_dimension": weakest,
@@ -1204,6 +1205,7 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
         "history_write": history_write,
         "trend": trend,
         "session_record": session_record,
+        "evidence": assessment.get("evidence", {}),
     }
 
 

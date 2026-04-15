@@ -989,6 +989,20 @@ class PromptIQEngineTests(unittest.TestCase):
         with self.assertRaises(ValueError, msg="evidence"):
             ENGINE.validate_assessment(base)
 
+    def test_finalize_includes_evidence_in_output(self):
+        assessment = make_assessment()
+        assessment["evidence"] = {
+            "clarity": "Third prompt did not specify expected output format",
+        }
+        result = ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
+        self.assertIn("evidence", result)
+        self.assertEqual(result["evidence"]["clarity"], "Third prompt did not specify expected output format")
+
+    def test_finalize_evidence_absent_when_not_provided(self):
+        assessment = make_assessment()
+        result = ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
+        self.assertEqual(result.get("evidence"), {})
+
 
 if __name__ == '__main__':
     unittest.main()
