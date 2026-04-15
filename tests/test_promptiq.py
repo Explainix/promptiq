@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ENGINE_PATH = ROOT / 'engine' / 'promptiq.py'
-RUBRIC_PATH = ROOT / 'engine' / 'rubric_v1.json'
+ENGINE_PATH = ROOT / 'skills' / 'score' / 'scripts' / 'promptiq.py'
+RUBRIC_PATH = ROOT / 'skills' / 'score' / 'scripts' / 'rubric_v1.json'
 
 
 def load_engine():
