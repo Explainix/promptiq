@@ -122,6 +122,16 @@ def validate_assessment(assessment: dict[str, Any]) -> None:
         if numeric < 1 or numeric > 10:
             raise ValueError(f"{key} must be between 1 and 10")
 
+    evidence = assessment.get("evidence")
+    if evidence is not None:
+        if not isinstance(evidence, dict):
+            raise ValueError("evidence must be a dict")
+        for dim_key, sentence in evidence.items():
+            if dim_key not in DIMENSION_LABELS:
+                raise ValueError(f"evidence contains unknown dimension: {dim_key!r}")
+            if not isinstance(sentence, str):
+                raise ValueError(f"evidence[{dim_key!r}] must be a string")
+
 
 def derive_confidence(assessment: dict[str, Any], rubric: dict[str, Any]) -> str:
     rules = rubric["confidence_rules"]

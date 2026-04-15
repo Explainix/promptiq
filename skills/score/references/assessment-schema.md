@@ -14,6 +14,7 @@ Build an assessment object with these keys before calling the helper:
 - `applicability`
 - `evidence_counts`
 - `dimensions`
+- `evidence` (optional) — dict mapping dimension key to a one-sentence string quoting the specific prompt behavior that drove the score. Keys must match keys in `dimensions`. Example: `{"clarity": "Third prompt did not specify expected output format"}`
 
 ## Field Notes
 

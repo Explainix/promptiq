@@ -967,6 +967,28 @@ class PromptIQEngineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
 
+    def test_validate_assessment_accepts_evidence_field(self):
+        """evidence field is optional but when present must be a dict of dimension -> string."""
+        base = make_assessment()
+        base["evidence"] = {
+            "clarity": "Third prompt did not specify expected output format",
+            "context": "Provided file path and error message at session start",
+        }
+        # should not raise
+        ENGINE.validate_assessment(base)
+
+    def test_validate_assessment_rejects_non_string_evidence_value(self):
+        base = make_assessment()
+        base["evidence"] = {"clarity": 42}
+        with self.assertRaises(ValueError, msg="evidence"):
+            ENGINE.validate_assessment(base)
+
+    def test_validate_assessment_rejects_unknown_dimension_in_evidence(self):
+        base = make_assessment()
+        base["evidence"] = {"nonexistent_dim": "some text"}
+        with self.assertRaises(ValueError, msg="evidence"):
+            ENGINE.validate_assessment(base)
+
 
 if __name__ == '__main__':
     unittest.main()
