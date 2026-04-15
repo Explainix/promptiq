@@ -1002,15 +1002,27 @@ def next_band_requirements(target_total: float, confidence: str, assessment: dic
 
 def recent_trend_entries(records: list[dict[str, Any]], limit: int = 5) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    for record in records[-limit:]:
+    window = records[-limit:]
+    for i, record in enumerate(window):
         weakest = weakest_dimension_for_record(record)
-        entries.append(
-            {
-                "date": record.get("date"),
-                "total": round1(float(record["total"])),
-                "weakest_dimension": weakest,
-            }
-        )
+        entry: dict[str, Any] = {
+            "date": record.get("date"),
+            "total": round1(float(record["total"])),
+            "weakest_dimension": weakest,
+            "dimension_deltas": None,
+        }
+        if i > 0:
+            prev = window[i - 1]
+            prev_dims = prev.get("dimensions", {})
+            curr_dims = record.get("dimensions", {})
+            deltas: dict[str, float] = {}
+            for key in DIMENSION_LABELS:
+                prev_val = prev_dims.get(key)
+                curr_val = curr_dims.get(key)
+                if prev_val is not None and curr_val is not None:
+                    deltas[key] = round1(float(curr_val) - float(prev_val))
+            entry["dimension_deltas"] = deltas if deltas else None
+        entries.append(entry)
     return entries
 
 

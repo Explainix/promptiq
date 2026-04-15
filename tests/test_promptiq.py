@@ -1043,5 +1043,43 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertNotIn("no_evidence_cap", cap_reasons)
 
 
+    def test_recent_trend_entries_includes_dimension_deltas(self):
+        records = [
+            {
+                "date": "2026-04-10",
+                "total": 6.0,
+                "dimensions": {"clarity": 5, "context": 6, "iteration": 5,
+                               "decomposition": 5, "output_spec": 5,
+                               "examples": None, "reasoning": None, "tool_awareness": None},
+            },
+            {
+                "date": "2026-04-14",
+                "total": 6.5,
+                "dimensions": {"clarity": 7, "context": 6, "iteration": 5,
+                               "decomposition": 5, "output_spec": 5,
+                               "examples": None, "reasoning": None, "tool_awareness": None},
+            },
+        ]
+        entries = ENGINE.recent_trend_entries(records)
+        self.assertEqual(len(entries), 2)
+        second = entries[1]
+        self.assertIn("dimension_deltas", second)
+        self.assertEqual(second["dimension_deltas"]["clarity"], 2.0)
+        self.assertEqual(second["dimension_deltas"]["context"], 0.0)
+
+    def test_recent_trend_entries_first_entry_has_no_deltas(self):
+        records = [
+            {
+                "date": "2026-04-10",
+                "total": 6.0,
+                "dimensions": {"clarity": 5, "context": 6, "iteration": 5,
+                               "decomposition": 5, "output_spec": 5,
+                               "examples": None, "reasoning": None, "tool_awareness": None},
+            },
+        ]
+        entries = ENGINE.recent_trend_entries(records)
+        self.assertIsNone(entries[0].get("dimension_deltas"))
+
+
 if __name__ == '__main__':
     unittest.main()
