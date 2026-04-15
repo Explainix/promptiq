@@ -20,6 +20,9 @@ Review only user messages. Evaluate the user's steering quality, not the assista
    - `8` = strong power-user behavior
    - `9-10` = rare expert behavior
    Read [references/assessment-schema.md](references/assessment-schema.md) for the required assessment keys and field meanings.
+   For each dimension you score above 5, write a one-sentence evidence string that quotes or paraphrases the specific user prompt behavior that drove the score. Store these in an `evidence` dict keyed by dimension name.
+   Example: `"evidence": {"clarity": "Third prompt did not specify expected output format", "context": "Provided file path and error message at session start"}`
+   If you cannot find specific evidence for a dimension score above 5, lower the score to 5 instead of inventing evidence.
 
 2. Use the local helper.
    Respect `PROMPTIQ_HOME` when it is set. Otherwise use `~/.promptiq`.
@@ -42,6 +45,9 @@ Review only user messages. Evaluate the user's steering quality, not the assista
 4. Render the report.
    Use the exact section order in [references/report-template.md](references/report-template.md).
    Front-load `Why It Is Not Higher`.
-   Use `weakest_dimension` for the drill.
+   Use `weakest_dimension` as the Focus Dimension with its evidence sentence from the assessment.
+   Fold all other dimensions into the compact bar list.
    If `history_session_count >= 2`, include `Recent Trend` and `Focus Area`.
-   Keep the tone direct and fair. Add only light encouragement at the end, and only if the evidence supports it.
+   If `milestone` is present, include the `Milestone` section.
+   End with the `Next Step` offer: rewrite offer if `weakest_dimension.score < 6`, drill suggestion otherwise.
+   Keep the tone direct and fair.
