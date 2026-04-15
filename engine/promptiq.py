@@ -213,6 +213,20 @@ def apply_caps(raw_total: float, assessment: dict[str, Any], rubric: dict[str, A
             capped = min(capped, 8.4)
             reasons.append("above_8_5_gate_failed")
 
+    evidence_rules = rubric.get("evidence_rules", {})
+    no_evidence_cap = evidence_rules.get("no_evidence_cap")
+    high_score_threshold = evidence_rules.get("high_score_requires_evidence_above", 5)
+    if no_evidence_cap is not None and "evidence" in assessment:
+        evidence_field = assessment.get("evidence", {})
+        dimensions = assessment.get("dimensions", {})
+        has_high_score_without_evidence = any(
+            v is not None and float(v) > high_score_threshold and key not in evidence_field
+            for key, v in dimensions.items()
+        )
+        if has_high_score_without_evidence and capped > no_evidence_cap:
+            capped = min(capped, no_evidence_cap)
+            reasons.append("no_evidence_cap")
+
     return round1(capped), reasons
 
 

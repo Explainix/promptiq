@@ -1003,6 +1003,45 @@ class PromptIQEngineTests(unittest.TestCase):
         result = ENGINE.finalize(assessment, copy.deepcopy(RUBRIC), save=False)
         self.assertEqual(result.get("evidence"), {})
 
+    def test_apply_caps_no_evidence_cap(self):
+        """Dimension score > 5 without evidence sentence should cap total at 5."""
+        assessment = make_assessment()
+        assessment["dimensions"] = {
+            "clarity": 8,
+            "context": 5,
+            "iteration": 5,
+            "decomposition": 5,
+            "output_spec": 5,
+            "examples": None,
+            "reasoning": None,
+            "tool_awareness": None,
+        }
+        assessment["evidence"] = {}
+        raw_total = 5.6
+        confidence = "medium"
+        rubric = copy.deepcopy(RUBRIC)
+        total, cap_reasons = ENGINE.apply_caps(raw_total, assessment, rubric, confidence)
+        self.assertIn("no_evidence_cap", cap_reasons)
+
+    def test_apply_caps_no_evidence_cap_not_triggered_when_evidence_present(self):
+        assessment = make_assessment()
+        assessment["dimensions"] = {
+            "clarity": 8,
+            "context": 5,
+            "iteration": 5,
+            "decomposition": 5,
+            "output_spec": 5,
+            "examples": None,
+            "reasoning": None,
+            "tool_awareness": None,
+        }
+        assessment["evidence"] = {"clarity": "User specified exact output format in prompt 2"}
+        raw_total = 5.6
+        confidence = "medium"
+        rubric = copy.deepcopy(RUBRIC)
+        total, cap_reasons = ENGINE.apply_caps(raw_total, assessment, rubric, confidence)
+        self.assertNotIn("no_evidence_cap", cap_reasons)
+
 
 if __name__ == '__main__':
     unittest.main()
