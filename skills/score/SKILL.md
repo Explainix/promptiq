@@ -43,5 +43,5 @@ Review only user messages. Evaluate the user's steering quality, not the assista
    Use the exact section order in [references/report-template.md](references/report-template.md).
    Front-load `Why It Is Not Higher`.
    Use `weakest_dimension` for the drill.
-   If `history_session_count >= 3`, include `Recent Trend` and `Focus Area`.
+   If `history_session_count >= 2`, include `Recent Trend` and `Focus Area`.
    Keep the tone direct and fair. Add only light encouragement at the end, and only if the evidence supports it.

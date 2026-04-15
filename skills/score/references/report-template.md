@@ -46,7 +46,7 @@ Tool Awareness         [bar or N/A]
 **Next Session Drill**  
 [One concrete behavior to practice next time]
 
-If `history_session_count >= 3`, append:
+If `history_session_count >= 2`, append:
 
 **Recent Trend**
 
