@@ -835,7 +835,7 @@ def import_review_artifact_paths(session_id: str, session_fingerprint: str) -> d
 
 def import_review_finalize_command(assessment_path: Path, command_name: str = "score-import") -> str:
     return (
-        f'"${{PROMPTIQ_HOME:-$HOME/.promptiq}}/promptiq" {command_name} '
+        f'python scripts/promptiq.py {command_name} '
         f'--assessment-file "{assessment_path}" --save'
     )
 

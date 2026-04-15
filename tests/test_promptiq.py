@@ -423,7 +423,7 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertIn('score-import', prepared['next_command'])
         self.assertIn('--assessment-file', prepared['next_command'])
         self.assertNotIn('python3', prepared['next_command'])
-        self.assertIn('"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq"', prepared['next_command'])
+        self.assertIn('python scripts/promptiq.py', prepared['next_command'])
         self.assertIn('Edit the assessment_file in place', '\n'.join(prepared['notes']))
 
     def test_main_supports_prepare_import_review_without_session_id(self):
