@@ -48,27 +48,17 @@ PromptIQ is not for:
 
 ## Quick Start
 
-### Install
-
-Skills are self-contained. No separate install step is needed. The engine is bundled at `skills/score/scripts/promptiq.py`.
-
-### Verify the install
-
 ```bash
-python skills/score/scripts/promptiq.py doctor
+git clone https://github.com/Explainix/promptiq ~/.claude/skills/promptiq
 ```
 
-The `doctor` command tells you:
+Then type `/score` in Claude Code.
 
-- where PromptIQ is installed
-- whether the helper and rubric are present
-- where history will be stored
-- where imported session bundles will be stored
-- how many local sessions are currently tracked
-- how many imported sessions are currently available for replay workflows
-- whether your local history is corrupted and needs to be recreated
+### Verify
 
-When available, PromptIQ also stores session identity and model metadata so repeat scoring does not pollute trend lines.
+```bash
+python ~/.claude/skills/promptiq/skills/score/scripts/promptiq.py doctor
+```
 
 ## Usage
 
@@ -78,9 +68,6 @@ When available, PromptIQ also stores session identity and model metadata so repe
 4. Apply the `Next Session Drill` in your next working session.
 5. Run `/rewrite-last` when you want PromptIQ to tighten your recent prompts immediately.
 
-If `promptiq doctor` reports missing local files, run `/install` first.
-If `promptiq` is not on your `PATH` yet, use `"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq"` as a fallback.
-
 ## Import Past Sessions
 
 PromptIQ can also normalize and store old session transcripts locally so we can build replay and backfill workflows on top of stable data instead of brittle copy-paste.
@@ -88,26 +75,26 @@ PromptIQ can also normalize and store old session transcripts locally so we can 
 Import a session file:
 
 ```bash
-promptiq import-session \
+python ~/.claude/skills/promptiq/skills/score/scripts/promptiq.py import-session \
   --session-file ./fixtures/structured_debug_session.json
 ```
 
 List imported sessions:
 
 ```bash
-promptiq list-imports
+python ~/.claude/skills/promptiq/skills/score/scripts/promptiq.py list-imports
 ```
 
 Replay one imported session as a clean review artifact:
 
 ```bash
-promptiq replay-session --format markdown
+python ~/.claude/skills/promptiq/skills/score/scripts/promptiq.py replay-session --format markdown
 ```
 
 Include assistant turns when you need the full exchange instead of PromptIQ's default user-only view:
 
 ```bash
-promptiq replay-session \
+python ~/.claude/skills/promptiq/skills/score/scripts/promptiq.py replay-session \
   --include-assistant \
   --format markdown
 ```
@@ -127,7 +114,7 @@ PromptIQ stores imported bundles locally at `~/.promptiq/imports/` unless `PROMP
 If you want to turn an imported session into a real PromptIQ review workflow, generate an assessment seed first:
 
 ```bash
-promptiq score-import
+python ~/.claude/skills/promptiq/skills/score/scripts/promptiq.py score-import
 ```
 
 That command writes a ready-to-edit assessment JSON and a replay markdown file for the most recent imported session, then returns the exact finalize command to run after you fill in the judgment fields.
@@ -184,7 +171,7 @@ PromptIQ stores history locally at `~/.promptiq/history.json` and imported trans
 
 ```bash
 python3 -m unittest discover -s tests -v
-python skills/score/scripts/promptiq.py doctor
+python ~/.claude/skills/promptiq/skills/score/scripts/promptiq.py doctor
 ```
 
 If you change calibration or report behavior, update fixtures and tests in the same pull request.
