@@ -3,8 +3,7 @@
   "version": "0.4.0",
   "description": "Strict session reviews for power users collaborating with AI",
   "scripts": {
-    "test": "python3 -m unittest discover -s tests -v",
-    "test:smoke": "python3 -m unittest tests.test_install_script -v"
+    "test": "python3 -m unittest discover -s tests -v"
   },
   "keywords": [
     "claude-code",
