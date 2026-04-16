@@ -19,7 +19,6 @@ import os
 import re
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -36,7 +35,6 @@ DIMENSION_LABELS = {
 
 DEFAULT_PROMPTIQ_HOME = "~/.promptiq"
 DEFAULT_HISTORY_PATH = f"{DEFAULT_PROMPTIQ_HOME}/history.json"
-DEFAULT_IMPORTS_DIR = f"{DEFAULT_PROMPTIQ_HOME}/imports"
 DEFAULT_BIN_DIR = "~/.local/bin"
 DEFAULT_RUBRIC_FILENAME = "rubric_v1.json"
 ROLE_ALIASES = {
@@ -264,16 +262,6 @@ def resolved_bin_launcher_path() -> Path:
     return resolved_bin_dir() / "promptiq"
 
 
-def resolved_imports_dir(raw: str = DEFAULT_IMPORTS_DIR) -> Path:
-    override = os.environ.get("PROMPTIQ_IMPORTS_PATH")
-    if override:
-        return Path(os.path.expanduser(override))
-
-    promptiq_home = os.environ.get("PROMPTIQ_HOME")
-    if promptiq_home and raw == DEFAULT_IMPORTS_DIR:
-        return Path(os.path.expanduser(promptiq_home)) / "imports"
-    return Path(os.path.expanduser(raw))
-
 
 def canonical_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
@@ -379,71 +367,6 @@ def extract_transcript_messages(payload: Any) -> tuple[list[Any], dict[str, Any]
     raise ValueError("session payload must include 'transcript' or 'messages', or be a raw message array")
 
 
-def derive_import_session_fingerprint(messages: list[dict[str, str]], tool: str, model_version: str | None) -> str:
-    digest = hashlib.sha256(
-        canonical_json(
-            {
-                "tool": tool,
-                "model_version": model_version,
-                "messages": messages,
-            }
-        ).encode("utf-8")
-    ).hexdigest()
-    return f"sha256:{digest}"
-
-
-def normalize_transcript_bundle(payload: Any, source_path: Path | None = None) -> dict[str, Any]:
-    raw_messages, metadata = extract_transcript_messages(payload)
-    messages = [normalize_transcript_message(message) for message in raw_messages]
-    if not messages:
-        raise ValueError("session payload must contain at least one message")
-
-    tool = metadata.get("tool")
-    if not isinstance(tool, str) or not tool.strip():
-        tool = "imported"
-    else:
-        tool = tool.strip()
-
-    model_version = metadata.get("model_version")
-    if not isinstance(model_version, str) or not model_version.strip():
-        model_version = None
-    else:
-        model_version = model_version.strip()
-
-    explicit_fingerprint = metadata.get("session_fingerprint")
-    if not isinstance(explicit_fingerprint, str) or not explicit_fingerprint.strip():
-        explicit_fingerprint = None
-
-    session_fingerprint = explicit_fingerprint or derive_import_session_fingerprint(messages, tool, model_version)
-    session_id = metadata.get("session_id")
-    if not isinstance(session_id, str) or not session_id.strip():
-        session_id = f"import-{fingerprint_digest(session_fingerprint)}"
-    else:
-        session_id = session_id.strip()
-
-    session_summary = metadata.get("session_summary") or metadata.get("description") or metadata.get("name")
-    if not isinstance(session_summary, str) or not session_summary.strip():
-        session_summary = None
-    else:
-        session_summary = session_summary.strip()
-
-    bundle = {
-        "session_id": session_id,
-        "session_fingerprint": session_fingerprint,
-        "tool": tool,
-        "model_version": model_version,
-        "source_path": str(source_path.resolve()) if source_path is not None else None,
-        "imported_at": iso_timestamp(),
-        "message_count": len(messages),
-        "user_message_count": sum(1 for message in messages if message["role"] == "user"),
-        "messages": messages,
-    }
-
-    if session_summary is not None:
-        bundle["session_summary"] = session_summary
-
-    return bundle
-
 
 def save_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -503,109 +426,6 @@ def save_history(path: Path, data: dict[str, Any]) -> None:
     save_json(path, data)
 
 
-def session_import_path(session_id: str, session_fingerprint: str, imports_dir: Path | None = None) -> Path:
-    resolved = imports_dir or resolved_imports_dir()
-    base_name = slugify_identifier(session_id)
-    candidate = resolved / f"{base_name}.json"
-    if not candidate.exists():
-        return candidate
-
-    try:
-        existing = load_json(candidate)
-    except (OSError, json.JSONDecodeError):
-        existing = None
-
-    if isinstance(existing, dict) and existing.get("session_id") == session_id:
-        return candidate
-
-    return resolved / f"{base_name}-{fingerprint_digest(session_fingerprint)}.json"
-
-
-def summarize_import_bundle(bundle: dict[str, Any], path: Path) -> dict[str, Any]:
-    messages = bundle.get("messages", [])
-    if not isinstance(messages, list):
-        raise ValueError("import bundle messages must be an array")
-
-    message_count = bundle.get("message_count")
-    if not isinstance(message_count, int):
-        message_count = len(messages)
-
-    user_message_count = bundle.get("user_message_count")
-    if not isinstance(user_message_count, int):
-        user_message_count = sum(
-            1 for message in messages if isinstance(message, dict) and message.get("role") == "user"
-        )
-
-    return {
-        "session_id": bundle.get("session_id"),
-        "session_fingerprint": bundle.get("session_fingerprint"),
-        "tool": bundle.get("tool"),
-        "model_version": bundle.get("model_version"),
-        "session_summary": bundle.get("session_summary"),
-        "source_path": bundle.get("source_path"),
-        "imported_at": bundle.get("imported_at"),
-        "message_count": message_count,
-        "user_message_count": user_message_count,
-        "path": str(path),
-    }
-
-
-def load_import_index(imports_dir: Path | None = None) -> tuple[list[dict[str, Any]], list[str]]:
-    resolved = imports_dir or resolved_imports_dir()
-    if not resolved.exists():
-        return [], []
-
-    summaries: list[tuple[int, dict[str, Any]]] = []
-    warnings: list[str] = []
-
-    for path in sorted(resolved.glob("*.json")):
-        try:
-            bundle = load_json(path)
-            if not isinstance(bundle, dict):
-                raise ValueError("import bundle must be an object")
-            summaries.append((path.stat().st_mtime_ns, summarize_import_bundle(bundle, path)))
-        except (OSError, json.JSONDecodeError, ValueError):
-            warnings.append(path.name)
-
-    summaries.sort(key=lambda item: (item[0], item[1].get("session_id") or ""), reverse=True)
-    return [item[1] for item in summaries], warnings
-
-
-def import_session(payload: Any, source_path: Path | None = None) -> dict[str, Any]:
-    bundle = normalize_transcript_bundle(payload, source_path=source_path)
-    imports_dir = resolved_imports_dir()
-    target = session_import_path(bundle["session_id"], bundle["session_fingerprint"], imports_dir)
-    import_write = "updated_existing" if target.exists() else "saved_new"
-    save_json(target, bundle)
-
-    result = summarize_import_bundle(bundle, target)
-    result["import_path"] = result.pop("path")
-    result["import_write"] = import_write
-    return result
-
-
-def list_imports(imports_dir: Path | None = None) -> dict[str, Any]:
-    resolved = imports_dir or resolved_imports_dir()
-    imports, warnings = load_import_index(resolved)
-    latest = imports[0] if imports else None
-    return {
-        "imports_path": str(resolved),
-        "imports_exists": resolved.exists(),
-        "import_session_count": len(imports),
-        "imports_warning": "imports_unreadable" if warnings else None,
-        "unreadable_imports": warnings,
-        "latest_session_id": latest.get("session_id") if latest else None,
-        "latest_import_path": latest.get("path") if latest else None,
-        "imports": imports,
-    }
-
-
-def load_import_bundle(import_path: Path) -> dict[str, Any]:
-    bundle = load_json(import_path)
-    if not isinstance(bundle, dict):
-        raise ValueError("import bundle must be an object")
-    return bundle
-
 
 def resolve_promptiq_version() -> str:
     explicit = os.environ.get("PROMPTIQ_VERSION")
@@ -625,285 +445,6 @@ def resolve_promptiq_version() -> str:
 
     return "0.0.0"
 
-
-def resolve_import_bundle(
-    session_id: str | None = None,
-    import_path: Path | None = None,
-    imports_dir: Path | None = None,
-) -> tuple[dict[str, Any], Path]:
-    if import_path is not None:
-        resolved_path = import_path.expanduser()
-        if not resolved_path.exists():
-            raise ValueError(f"import file not found: {resolved_path}")
-        return load_import_bundle(resolved_path), resolved_path
-
-    imports_report = list_imports(imports_dir)
-    normalized_session_id = session_id.strip() if isinstance(session_id, str) else None
-    if not normalized_session_id or normalized_session_id == "latest":
-        latest_path = imports_report.get("latest_import_path")
-        if latest_path is None:
-            raise ValueError("no imported sessions found. Run import-session first.")
-        resolved_path = Path(latest_path)
-        return load_import_bundle(resolved_path), resolved_path
-
-    matches = [
-        item
-        for item in imports_report["imports"]
-        if item.get("session_id") == normalized_session_id or item.get("session_fingerprint") == normalized_session_id
-    ]
-    if not matches:
-        raise ValueError(f"imported session not found: {normalized_session_id}")
-
-    match_path = Path(matches[0]["path"])
-    return load_import_bundle(match_path), match_path
-
-
-def replay_messages(bundle: dict[str, Any], include_assistant: bool = False) -> list[dict[str, Any]]:
-    raw_messages = bundle.get("messages", [])
-    if not isinstance(raw_messages, list):
-        raise ValueError("import bundle messages must be an array")
-
-    messages: list[dict[str, Any]] = []
-    for index, message in enumerate(raw_messages, start=1):
-        if not isinstance(message, dict):
-            raise ValueError("import bundle messages must contain objects")
-        role = normalize_message_role(message.get("role"))
-        if not include_assistant and role != "user":
-            continue
-        messages.append(
-            {
-                "turn": index,
-                "role": role,
-                "content": normalize_message_content(message.get("content")),
-            }
-        )
-    return messages
-
-
-def replay_metadata(bundle: dict[str, Any], import_path: Path, include_assistant: bool) -> dict[str, Any]:
-    summary = summarize_import_bundle(bundle, import_path)
-    summary["replay_view"] = "full_transcript" if include_assistant else "user_only"
-    return summary
-
-
-def fallback_session_summary(bundle: dict[str, Any]) -> str:
-    session_summary = bundle.get("session_summary")
-    if isinstance(session_summary, str) and session_summary.strip():
-        return session_summary.strip()
-
-    messages = bundle.get("messages", [])
-    if isinstance(messages, list):
-        for message in messages:
-            if not isinstance(message, dict):
-                continue
-            if normalize_message_role(message.get("role")) != "user":
-                continue
-            content = normalize_message_content(message.get("content"))
-            if len(content) <= 140:
-                return content
-            return f"{content[:137].rstrip()}..."
-
-    return "Imported session review"
-
-
-def render_replay_markdown(bundle: dict[str, Any], import_path: Path, include_assistant: bool = False) -> str:
-    metadata = replay_metadata(bundle, import_path, include_assistant)
-    transcript = replay_messages(bundle, include_assistant=include_assistant)
-    transcript_lines: list[str] = []
-
-    if include_assistant:
-        for message in transcript:
-            transcript_lines.append(f"[{message['turn']}] {message['role'].title()}")
-            transcript_lines.append(message["content"])
-            transcript_lines.append("")
-    else:
-        for ordinal, message in enumerate(transcript, start=1):
-            transcript_lines.append(f"[User {ordinal}]")
-            transcript_lines.append(message["content"])
-            transcript_lines.append("")
-
-    if transcript_lines and transcript_lines[-1] == "":
-        transcript_lines.pop()
-
-    lines = [
-        "## PromptIQ Session Replay",
-        "",
-        "| Metric | Value |",
-        "| --- | --- |",
-        f"| Session ID | `{metadata['session_id']}` |",
-        f"| Tool | `{metadata['tool'] or 'unknown'}` |",
-        f"| Messages | {metadata['message_count']} total / {metadata['user_message_count']} user |",
-        f"| View | `{metadata['replay_view']}` |",
-        f"| Imported At | `{metadata['imported_at'] or 'unknown'}` |",
-        f"| Source | `{metadata['source_path'] or metadata['path']}` |",
-    ]
-
-    session_summary = metadata.get("session_summary")
-    if session_summary:
-        lines.extend(["", "**Session Summary**", "", session_summary])
-
-    lines.extend(
-        [
-            "",
-            "**Transcript**",
-            "",
-            "```text",
-            *transcript_lines,
-            "```",
-        ]
-    )
-
-    if not include_assistant:
-        lines.extend(
-            [
-                "",
-                "PromptIQ scores user steering, so this replay view intentionally shows only user turns.",
-            ]
-        )
-
-    return "\n".join(lines)
-
-
-def replay_session(
-    session_id: str | None = None,
-    import_path: Path | None = None,
-    include_assistant: bool = False,
-) -> dict[str, Any]:
-    bundle, resolved_path = resolve_import_bundle(session_id=session_id, import_path=import_path)
-    metadata = replay_metadata(bundle, resolved_path, include_assistant)
-    transcript = replay_messages(bundle, include_assistant=include_assistant)
-    return {
-        **metadata,
-        "messages": transcript,
-        "markdown": render_replay_markdown(bundle, resolved_path, include_assistant=include_assistant),
-    }
-
-
-def draft_assessment(
-    session_id: str | None = None,
-    import_path: Path | None = None,
-) -> dict[str, Any]:
-    bundle, resolved_path = resolve_import_bundle(session_id=session_id, import_path=import_path)
-    replay = replay_session(
-        import_path=resolved_path,
-        include_assistant=False,
-    )
-    prefilled_summary = fallback_session_summary(bundle)
-    user_turn_count = replay["user_message_count"]
-
-    return {
-        "source": {
-            "session_id": replay["session_id"],
-            "session_fingerprint": replay["session_fingerprint"],
-            "tool": replay["tool"],
-            "model_version": replay["model_version"],
-            "import_path": str(resolved_path),
-            "source_path": replay["source_path"],
-            "imported_at": replay["imported_at"],
-        },
-        "message_stats": {
-            "message_count": replay["message_count"],
-            "user_message_count": replay["user_message_count"],
-        },
-        "notes": [
-            "Review only user messages. Evaluate steering quality, not assistant quality.",
-            "meaningful_user_messages is prefilled from imported user turns; lower it if some turns are filler rather than real steering.",
-            "Fill in complexity, applicability, evidence counts, and dimension scores before calling finalize.",
-        ],
-        "assessment_template": {
-            "date": iso_date(),
-            "plugin_version": resolve_promptiq_version(),
-            "session_id": replay["session_id"],
-            "session_fingerprint": replay["session_fingerprint"],
-            "model_version": replay["model_version"],
-            "tool": replay["tool"] or "imported",
-            "session_summary": prefilled_summary,
-            "complexity": "[set: low | medium | high]",
-            "meaningful_user_messages": user_turn_count,
-            "applicability": {
-                "examples": "[set: true | false]",
-                "reasoning": "[set: true | false]",
-                "tool_awareness": "[set: true | false]",
-                "verification": "[set: true | false]",
-            },
-            "evidence_counts": {
-                "evidence_quotes": "[set integer]",
-                "corrections_or_refinements": "[set integer]",
-                "output_constraints": "[set integer]",
-                "tool_signals": "[set integer]",
-                "verification_signals": "[set integer]",
-            },
-            "dimensions": {
-                "clarity": "[score 1-10]",
-                "context": "[score 1-10]",
-                "iteration": "[score 1-10]",
-                "decomposition": "[score 1-10]",
-                "output_spec": "[score 1-10]",
-                "examples": "[score 1-10 or null]",
-                "reasoning": "[score 1-10 or null]",
-                "tool_awareness": "[score 1-10 or null]",
-            },
-        },
-        "replay_markdown": replay["markdown"],
-    }
-
-
-def import_review_artifact_paths(session_id: str, session_fingerprint: str) -> dict[str, Path]:
-    temp_root = Path(tempfile.gettempdir())
-    token = slugify_identifier(f"{session_id}-{fingerprint_digest(session_fingerprint)}")
-    return {
-        "assessment": temp_root / f"promptiq-import-review-{token}-assessment.json",
-        "replay": temp_root / f"promptiq-import-review-{token}-replay.md",
-    }
-
-
-def import_review_finalize_command(assessment_path: Path, command_name: str = "score-import") -> str:
-    return (
-        f'python scripts/promptiq.py {command_name} '
-        f'--assessment-file "{assessment_path}" --save'
-    )
-
-
-def prepare_import_review(
-    session_id: str | None = None,
-    import_path: Path | None = None,
-) -> dict[str, Any]:
-    draft = draft_assessment(session_id=session_id, import_path=import_path)
-    template = draft["assessment_template"]
-    source = draft["source"]
-    paths = import_review_artifact_paths(template["session_id"], template["session_fingerprint"])
-
-    save_json(paths["assessment"], template)
-    paths["replay"].parent.mkdir(parents=True, exist_ok=True)
-    paths["replay"].write_text(draft["replay_markdown"], encoding="utf-8")
-
-    return {
-        **draft,
-        "assessment_file": str(paths["assessment"]),
-        "replay_file": str(paths["replay"]),
-        "next_command": import_review_finalize_command(paths["assessment"], command_name="score-import"),
-        "notes": draft["notes"]
-        + [
-            "Edit the assessment_file in place, then run next_command to finalize the imported review.",
-        ],
-    }
-
-
-def score_import(
-    rubric: dict[str, Any],
-    save: bool,
-    session_id: str | None = None,
-    import_path: Path | None = None,
-    assessment: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    if assessment is None:
-        prepared = prepare_import_review(session_id=session_id, import_path=import_path)
-        prepared["mode"] = "prepare"
-        return prepared
-
-    finalized = finalize(assessment, rubric, save)
-    finalized["mode"] = "finalized"
-    return finalized
 
 
 def compatible_sessions(history: dict[str, Any], rubric_version: str) -> list[dict[str, Any]]:
@@ -1123,7 +664,6 @@ def doctor(helper_path: Path, rubric_path: Path) -> dict[str, Any]:
             history_file = history_path(rubric)
 
     history = load_history(history_file)
-    imports_report = list_imports()
     history_warning = history.get("_warning")
     if history_warning == "history_corrupted":
         issues.append("history_corrupted")
@@ -1158,10 +698,6 @@ def doctor(helper_path: Path, rubric_path: Path) -> dict[str, Any]:
         "history_exists": history_file.exists(),
         "history_session_count": len(history.get("sessions", [])),
         "history_warning": history_warning,
-        "imports_path": imports_report["imports_path"],
-        "imports_exists": imports_report["imports_exists"],
-        "import_session_count": imports_report["import_session_count"],
-        "imports_warning": imports_report["imports_warning"],
     }
 
 
@@ -1251,81 +787,15 @@ def finalize(assessment: dict[str, Any], rubric: dict[str, Any], save: bool) -> 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["doctor", "finalize", "import-session", "list-imports", "replay-session", "draft-assessment", "prepare-import-review", "score-import"])
+    parser.add_argument("command", choices=["doctor", "finalize"])
     parser.add_argument("--assessment-json")
     parser.add_argument("--assessment-file")
-    parser.add_argument("--session-json")
-    parser.add_argument("--session-file")
-    parser.add_argument("--session-id")
-    parser.add_argument("--import-path")
-    parser.add_argument("--format", choices=["json", "markdown"], default="json")
-    parser.add_argument("--include-assistant", action="store_true")
     parser.add_argument("--rubric", default=str(Path(__file__).with_name(DEFAULT_RUBRIC_FILENAME)))
     parser.add_argument("--save", action="store_true")
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     try:
         if args.command == "doctor":
             result = doctor(Path(__file__), Path(args.rubric))
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return
-
-        if args.command == "import-session":
-            source_path = Path(args.session_file).expanduser() if args.session_file else None
-            session_payload = load_session_payload(args.session_json, args.session_file)
-            result = import_session(session_payload, source_path=source_path)
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return
-
-        if args.command == "list-imports":
-            result = list_imports()
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return
-
-        if args.command == "replay-session":
-            import_path = Path(args.import_path).expanduser() if args.import_path else None
-            result = replay_session(
-                session_id=args.session_id,
-                import_path=import_path,
-                include_assistant=args.include_assistant,
-            )
-            if args.format == "markdown":
-                print(result["markdown"])
-            else:
-                print(json.dumps(result, ensure_ascii=False, indent=2))
-            return
-
-        if args.command == "draft-assessment":
-            import_path = Path(args.import_path).expanduser() if args.import_path else None
-            result = draft_assessment(
-                session_id=args.session_id,
-                import_path=import_path,
-            )
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return
-
-        if args.command == "prepare-import-review":
-            import_path = Path(args.import_path).expanduser() if args.import_path else None
-            result = prepare_import_review(
-                session_id=args.session_id,
-                import_path=import_path,
-            )
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return
-
-        if args.command == "score-import":
-            import_path = Path(args.import_path).expanduser() if args.import_path else None
-            assessment = None
-            rubric: dict[str, Any] = {}
-            if args.assessment_json is not None or args.assessment_file is not None:
-                assessment = load_assessment_payload(args.assessment_json, args.assessment_file)
-                rubric = load_json(Path(args.rubric))
-            result = score_import(
-                rubric,
-                save=args.save,
-                session_id=args.session_id,
-                import_path=import_path,
-                assessment=assessment,
-            )
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
 
