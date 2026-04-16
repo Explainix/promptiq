@@ -11,7 +11,7 @@ Run `/score` at the end of a working session to get:
 - a blunt **Why It Is Not Higher** section
 - one concrete next-session drill
 
-Run `/rewrite-last` when you want PromptIQ to rewrite your last 1–3 prompts into stronger, paste-ready versions for the same task.
+Run `/draft` before sending a prompt — give it your intent or a rough draft, get back a stronger, paste-ready version with an explanation of what changed.
 
 ## Install
 
@@ -40,7 +40,7 @@ Then type `/score` at the end of any session.
 2. Run `/score`.
 3. Read **Why It Is Not Higher** before looking at the total.
 4. Apply the **Next Session Drill** next time.
-5. Run `/rewrite-last` when you want tighter prompts immediately.
+5. Run `/draft` before your next prompt to write it stronger from the start.
 
 ## Who It Is For
 
@@ -62,7 +62,7 @@ Calibration rules:
 ## Example Output
 
 - [examples/sample-report.md](examples/sample-report.md) — representative `/score` report
-- [examples/rewrite-last-sample.md](examples/rewrite-last-sample.md) — representative `/rewrite-last` result
+- [examples/draft-sample.md](examples/draft-sample.md) — representative `/draft` result
 
 ## Privacy
 
