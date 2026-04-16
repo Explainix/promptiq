@@ -1,5 +1,7 @@
 # PromptIQ
 
+[中文](README.zh.md) | English
+
 Strict session reviews for power users collaborating with AI.
 
 ## What It Does
@@ -23,13 +25,18 @@ Run `/draft` before sending a prompt — give it your intent or a rough draft, g
 /reload-plugins
 ```
 
+Or from the terminal:
+
+```bash
+claude plugin install promptiq@promptiq
+```
+
 Then type `/score` at the end of any session.
 
 ### Codex
 
-```
-/plugin marketplace add Explainix/promptiq
-/plugin install promptiq@promptiq
+```bash
+git clone https://github.com/Explainix/promptiq ~/.codex/skills/promptiq
 ```
 
 Then type `/score` at the end of any session.
