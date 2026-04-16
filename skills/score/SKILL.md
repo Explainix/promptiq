@@ -25,14 +25,12 @@ Review only user messages. Evaluate the user's steering quality, not the assista
    If you cannot find specific evidence for a dimension score above 5, lower the score to 5 instead of inventing evidence.
 
 2. Use the local helper.
-   Respect `PROMPTIQ_HOME` when it is set. Otherwise use `~/.promptiq`.
-   Check the resolved helper directory for `promptiq.py` and `rubric_v1.json`.
-   If either file is missing, stop and tell the user to run `/install`.
+   The engine is bundled at `skills/score/scripts/promptiq.py`.
    Write the assessment JSON to `/tmp/promptiq-assessment.json`.
    Run:
 
 ```bash
-"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq" finalize \
+python skills/score/scripts/promptiq.py finalize \
   --assessment-file /tmp/promptiq-assessment.json \
   --save
 ```

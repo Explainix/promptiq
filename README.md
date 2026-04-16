@@ -48,24 +48,14 @@ PromptIQ is not for:
 
 ## Quick Start
 
-### AI-native install
+### Install
 
-Paste this into your AI CLI:
-
-```text
-Read https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/SKILL.md and install PromptIQ. Do not ask follow-up questions unless a command fails.
-```
-
-### Shell install
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Explainix/promptiq/main/skills/install/scripts/install_promptiq.sh | sh
-```
+Skills are self-contained. No separate install step is needed. The engine is bundled at `skills/score/scripts/promptiq.py`.
 
 ### Verify the install
 
 ```bash
-promptiq doctor
+python skills/score/scripts/promptiq.py doctor
 ```
 
 The `doctor` command tells you:
@@ -194,7 +184,7 @@ PromptIQ stores history locally at `~/.promptiq/history.json` and imported trans
 
 ```bash
 python3 -m unittest discover -s tests -v
-./engine/promptiq.py doctor
+python skills/score/scripts/promptiq.py doctor
 ```
 
 If you change calibration or report behavior, update fixtures and tests in the same pull request.
@@ -203,7 +193,6 @@ If you change calibration or report behavior, update fixtures and tests in the s
 
 ```text
 promptiq/
-  engine/
   examples/
   fixtures/
   skills/

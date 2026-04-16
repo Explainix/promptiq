@@ -612,7 +612,7 @@ def resolve_promptiq_version() -> str:
     if explicit and explicit.strip():
         return explicit.strip()
 
-    package_path = Path(__file__).resolve().parents[1] / "package.json"
+    package_path = Path(__file__).resolve().parents[3] / "package.json"
     if package_path.exists():
         try:
             package_json = load_json(package_path)
@@ -859,7 +859,7 @@ def import_review_artifact_paths(session_id: str, session_fingerprint: str) -> d
 
 def import_review_finalize_command(assessment_path: Path, command_name: str = "score-import") -> str:
     return (
-        f'"${{PROMPTIQ_HOME:-$HOME/.promptiq}}/promptiq" {command_name} '
+        f'python scripts/promptiq.py {command_name} '
         f'--assessment-file "{assessment_path}" --save'
     )
 

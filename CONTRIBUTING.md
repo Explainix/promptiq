@@ -14,7 +14,7 @@ PromptIQ is a small repo, but it is opinionated. The goal is not to ship more su
 
 ```bash
 python3 -m unittest discover -s tests -v
-./engine/promptiq.py doctor
+python skills/score/scripts/promptiq.py doctor
 ```
 
 The repo intentionally avoids heavy dependencies. Please keep it lightweight unless a change clearly improves user trust or contributor velocity.

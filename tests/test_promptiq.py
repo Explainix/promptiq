@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ENGINE_PATH = ROOT / 'engine' / 'promptiq.py'
-RUBRIC_PATH = ROOT / 'engine' / 'rubric_v1.json'
+ENGINE_PATH = ROOT / 'skills' / 'score' / 'scripts' / 'promptiq.py'
+RUBRIC_PATH = ROOT / 'skills' / 'score' / 'scripts' / 'rubric_v1.json'
 
 
 def load_engine():
@@ -423,7 +423,7 @@ class PromptIQEngineTests(unittest.TestCase):
         self.assertIn('score-import', prepared['next_command'])
         self.assertIn('--assessment-file', prepared['next_command'])
         self.assertNotIn('python3', prepared['next_command'])
-        self.assertIn('"${PROMPTIQ_HOME:-$HOME/.promptiq}/promptiq"', prepared['next_command'])
+        self.assertIn('python scripts/promptiq.py', prepared['next_command'])
         self.assertIn('Edit the assessment_file in place', '\n'.join(prepared['notes']))
 
     def test_main_supports_prepare_import_review_without_session_id(self):
