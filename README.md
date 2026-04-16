@@ -17,6 +17,12 @@ Run `/draft` before sending a prompt — give it your intent or a rough draft, g
 
 ## Install
 
+**One-liner (any agent):**
+
+```
+Read https://raw.githubusercontent.com/Explainix/promptiq/main/install.md and follow the instructions to install PromptIQ.
+```
+
 ### Claude Code
 
 ```

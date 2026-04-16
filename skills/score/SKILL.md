@@ -40,8 +40,13 @@ python skills/score/scripts/promptiq.py finalize \
    Do not recompute those fields in the report.
    If `history_warning` is present, tell the user their local trend history was reset because the saved history file was unreadable.
 
-4. Render the report.
-   Use the exact section order in [references/report-template.md](references/report-template.md).
+4. Detect the user's language.
+   Check the language of the user's messages in this session.
+   If the majority of user messages are in Chinese (Simplified or Traditional), render the report in Chinese using [references/report-template.zh.md](references/report-template.zh.md).
+   Otherwise, render in English using [references/report-template.md](references/report-template.md).
+
+5. Render the report.
+   Use the exact section order in the chosen template.
    Front-load `Why It Is Not Higher`.
    Use `weakest_dimension` as the Focus Dimension with its evidence sentence from the assessment.
    Fold all other dimensions into the compact bar list.

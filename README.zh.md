@@ -17,6 +17,12 @@ English | [中文](README.zh.md)
 
 ## 安装
 
+**一键安装（任意 AI 助手）：**
+
+```
+Read https://raw.githubusercontent.com/Explainix/promptiq/main/install.md and follow the instructions to install PromptIQ.
+```
+
 ### Claude Code
 
 ```
