@@ -22,12 +22,12 @@ Review only user messages. Evaluate the user's steering quality, not the assista
    Read [references/assessment-schema.md](references/assessment-schema.md) for the required assessment keys and field meanings.
 
 2. Use the local helper.
-   The engine is at `scripts/promptiq.py` relative to this skill.
+   The engine is bundled at `skills/score/scripts/promptiq.py`.
    Write the assessment JSON to `/tmp/promptiq-assessment.json`.
    Run:
 
 ```bash
-python scripts/promptiq.py finalize \
+python skills/score/scripts/promptiq.py finalize \
   --assessment-file /tmp/promptiq-assessment.json \
   --save
 ```

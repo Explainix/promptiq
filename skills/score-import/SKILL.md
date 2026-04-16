@@ -8,11 +8,11 @@ description: Review an imported PromptIQ session transcript and render the same 
 Review only user messages from the imported session. Evaluate steering quality, not assistant quality.
 
 1. Resolve the imported session to score.
-   The engine is at `scripts/promptiq.py` relative to this skill.
+   The engine is bundled at `skills/score-import/scripts/promptiq.py`.
    Run:
 
 ```bash
-python scripts/promptiq.py list-imports
+python skills/score-import/scripts/promptiq.py list-imports
 ```
 
    If there are no imported sessions, stop and tell the user to run `import-session` first.
@@ -23,13 +23,13 @@ python scripts/promptiq.py list-imports
    If you are scoring the most recent import, run:
 
 ```bash
-python scripts/promptiq.py score-import
+python skills/score-import/scripts/promptiq.py score-import
 ```
 
    If you are scoring a specific imported session, run:
 
 ```bash
-python scripts/promptiq.py score-import \
+python skills/score-import/scripts/promptiq.py score-import \
   --session-id [target-session-id]
 ```
 
