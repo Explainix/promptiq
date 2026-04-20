@@ -8,7 +8,7 @@ Run these three commands inside a Claude Code session:
 
 ```
 /plugin marketplace add Explainix/promptiq
-/plugin install promptiq@promptiq
+/plugin install promptiq@explainix
 /reload-plugins
 ```
 

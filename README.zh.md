@@ -27,14 +27,14 @@ Read https://raw.githubusercontent.com/Explainix/promptiq/main/install.md and fo
 
 ```
 /plugin marketplace add Explainix/promptiq
-/plugin install promptiq@promptiq
+/plugin install promptiq@explainix
 /reload-plugins
 ```
 
 或在终端直接运行：
 
 ```bash
-claude plugin install promptiq@promptiq
+claude plugin install promptiq@explainix
 ```
 
 安装后在任意会话结束时输入 `/score`。

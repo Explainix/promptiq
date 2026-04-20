@@ -27,14 +27,14 @@ Read https://raw.githubusercontent.com/Explainix/promptiq/main/install.md and fo
 
 ```
 /plugin marketplace add Explainix/promptiq
-/plugin install promptiq@promptiq
+/plugin install promptiq@explainix
 /reload-plugins
 ```
 
 Or from the terminal:
 
 ```bash
-claude plugin install promptiq@promptiq
+claude plugin install promptiq@explainix
 ```
 
 Then type `/score` at the end of any session.
